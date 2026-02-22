@@ -23,6 +23,8 @@ export default ts.config(
       'vue/max-attributes-per-line': 'off',
       'vue/html-self-closing': 'off',
       'vue/singleline-html-element-content-newline': 'off',
+      'vue/html-indent': 'off',
+      'vue/html-closing-bracket-newline': 'off',
       'no-undef': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',

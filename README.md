@@ -90,6 +90,7 @@ Si prefieres no usar Docker para el desarrollo de código:
 Antes de realizar un commit o push, es obligatorio validar que el código cumple con los estándares del Imperio. Ejecuta estos comandos paso a paso:
 
 ### Backend (Chasqui Checks)
+
 1. **Pruebas Unitarias**:
    ```bash
    python manage.py test
@@ -104,6 +105,7 @@ Antes de realizar un commit o push, es obligatorio validar que el código cumple
    ```
 
 ### Frontend (Quipu Checks)
+
 1. **Auditoría de Seguridad**:
    ```bash
    pnpm audit
@@ -112,7 +114,7 @@ Antes de realizar un commit o push, es obligatorio validar que el código cumple
    ```bash
    pnpm ci:validate
    ```
-   *(Este comando ejecuta automáticamente: lint, format:check, typecheck, build y vitest)*
+   _(Este comando ejecuta automáticamente: lint, format:check, typecheck, build y vitest)_
 
 ---
 
