@@ -11,7 +11,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "typecheck": "vue-tsc -p ./tsconfig.app.json",
-    "ci:validate": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm build && pnpm test"
+    "ci:validate": "pnpm lint && pnpm format:check && pnpm build && pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@handsontable/vue3": "^16.2.0",
