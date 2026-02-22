@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import UHandsontable from '../../../components/UHandsontable.vue'
 import { getCookie } from '../../../utils/cookies'
 import { STATUS_UUIDS } from '../../../utils/status'
@@ -11,61 +11,53 @@ import UImportModal from '../../../components/UImportModal.vue'
 import UHistoryModal from '../../../components/UHistoryModal.vue'
 import { useDashboard } from '../../../composables/useDashboard'
 import { useAuth } from '../../../composables/useAuth'
-import { COUNTRY_PERMISSIONS } from '../../../constants/permissions/index'
+import { DEPARTMENT_PERMISSIONS, COUNTRY_PERMISSIONS } from '../../../constants/permissions/index'
 
 const toast = useToast()
+const route = useRoute()
 const { fetchStatuses, getStatus } = useStatus()
 const { loading: excelLoading, downloadExcel, validateExcel, uploadExcel } = useExcel()
 const { isNotificationsSlideoverOpen } = useDashboard()
-const { can } = useAuth()
+const { can: originalCan } = useAuth()
+const can = (permission: string) => {
+  const hasPerm = originalCan(permission)
+  if (!hasPerm) {
+    console.warn(`[Permission Debug] User lacks permission: ${permission}`)
+  }
+  return hasPerm
+}
 
 const isImportModalOpen = ref(false)
 const previewData = ref<any[]>([])
 const currentFile = ref<File | null>(null)
 
-interface Country {
+interface Department {
   id?: string
   code: string
   name: string
   abbreviation: string
-  iso_alpha_2?: string
-  iso_alpha_3?: string
-  phone_prefix?: string
+  key_country: string
+  country_name?: string
   status: string
   isNew?: boolean
   isDirty?: boolean
   isPendingInactivate?: boolean
 }
 
-const flagRenderer = (
-  instance: any,
-  td: HTMLTableCellElement,
-  row: number,
-  _col: number,
-  _prop: string | number,
-  value: any,
-  cellProperties: any
-) => {
-  // Use the HTML renderer from Handsontable
-  const iso2 = instance.getSourceDataAtRow(row).iso_alpha_2
-  if (iso2 && iso2.length === 2) {
-    const flagUrl = `https://flagcdn.com/w20/${iso2.toLowerCase()}.png`
-    td.innerHTML = `<div class="flex items-center gap-2 justify-center h-full">
-      <img src="${flagUrl}" class="h-3 w-5 object-cover rounded-sm shadow-sm" onerror="this.style.display='none'" />
-      <span class="font-mono text-xs">${value || ''}</span>
-    </div>`
-  } else {
-    td.textContent = value || ''
-  }
-  td.className = cellProperties.className || ''
-  return td
+interface Country {
+  id: string
+  name: string
 }
+
+const countryFilter = ref((route.query.country as string) || '')
+const countriesList = ref<Country[]>([])
+const parentCountryName = ref('')
 
 // Pagination state
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const countries = ref<Country[]>([]) // Only holds the current page from server
+const departments = ref<Department[]>([])
 const loading = ref(false)
 const uHandsontableRef = ref<any>(null)
 const isDiscardModalOpen = ref(false)
@@ -76,42 +68,45 @@ const isAnnulModalOpen = ref(false)
 const recordsToAnnul = ref<string[]>([])
 const statusFilter = ref<'todos' | 'activo' | 'inactivo'>('todos')
 
-// With server-side pagination, displayCountries is the current page as-is
-// Local search still filters within the current page for UX responsiveness
-const displayCountries = computed(() => {
-  if (!searchQuery.value) return countries.value
+const isValidating = ref(false)
+const validatingMsg = ref('')
+
+// Server-side pagination: displayDepartments is just the current page
+// Local search filters within the loaded page for instant UX
+const displayDepartments = computed(() => {
+  if (!searchQuery.value) return departments.value
   const q = searchQuery.value.toLowerCase()
-  return countries.value.filter(
-    (c) =>
-      (c.code || '').toLowerCase().includes(q) ||
-      (c.name || '').toLowerCase().includes(q) ||
-      (c.abbreviation || '').toLowerCase().includes(q)
+  return departments.value.filter(
+    (d) =>
+      (d.code || '').toLowerCase().includes(q) ||
+      (d.name || '').toLowerCase().includes(q) ||
+      (d.abbreviation || '').toLowerCase().includes(q)
   )
 })
 
-// Total comes from server; local search shows filtered count from current page
 const displayTotal = computed(() => total.value)
 
-// Count unsaved changes by type (on ALL data)
-const newCount = computed(() => countries.value.filter((c) => c.isNew).length)
+const newCount = computed(() => departments.value.filter((d) => d.isNew).length)
 const editedCount = computed(
-  () => countries.value.filter((c) => c.isDirty && !c.isNew && !c.isPendingInactivate).length
+  () => departments.value.filter((d) => d.isDirty && !d.isNew && !d.isPendingInactivate).length
 )
 const inactivateCount = computed(
   () =>
-    countries.value.filter(
-      (c) => c.isPendingInactivate && c.status === STATUS_UUIDS.STATUS_INACTIVO
+    departments.value.filter(
+      (d) => d.isPendingInactivate && d.status === STATUS_UUIDS.STATUS_INACTIVO
     ).length
 )
 const restoreCount = computed(
   () =>
-    countries.value.filter((c) => c.isPendingInactivate && c.status === STATUS_UUIDS.STATUS_ACTIVO)
-      .length
+    departments.value.filter(
+      (d) => d.isPendingInactivate && d.status === STATUS_UUIDS.STATUS_ACTIVO
+    ).length
 )
 const annulCount = computed(
   () =>
-    countries.value.filter((c) => c.isPendingInactivate && c.status === STATUS_UUIDS.STATUS_ANULADO)
-      .length
+    departments.value.filter(
+      (d) => d.isPendingInactivate && d.status === STATUS_UUIDS.STATUS_ANULADO
+    ).length
 )
 const dirtyCount = computed(
   () =>
@@ -124,12 +119,10 @@ const dirtyCount = computed(
 
 const hotSettings = ref({
   themeName: 'ht-theme-main',
-  rowHeaders: true, // Excel-like numbers
-  rowHeaderWidth: 50, // Fixed width for row headers
+  rowHeaders: true,
+  rowHeaderWidth: 50,
   colHeaders: true,
   autoColumnSize: { useHeaders: true, syncLimit: '100%' },
-
-  // Advanced Features
   copyPaste: true,
   contextMenu: {
     items: {
@@ -164,12 +157,10 @@ const hotSettings = ref({
               }
             }
           })
-          if (ids.length > 0) {
-            toggleStatus(ids)
-          }
+          if (ids.length > 0) toggleStatus(ids)
         },
         disabled: function () {
-          if (!can(COUNTRY_PERMISSIONS.INACTIVATE)) return true
+          if (!can(DEPARTMENT_PERMISSIONS.INACTIVATE)) return true
           const row = (this as any).getSelectedLast()?.[0]
           if (row === undefined) return true
           const rowData = (this as any).getSourceDataAtRow(row)
@@ -197,45 +188,24 @@ const hotSettings = ref({
               }
             }
           })
-          if (ids.length > 0) {
-            toggleStatus(ids)
-          }
+          if (ids.length > 0) toggleStatus(ids)
         },
         disabled: function () {
-          if (!can(COUNTRY_PERMISSIONS.RESTORE)) return true
+          if (!can(DEPARTMENT_PERMISSIONS.RESTORE)) return true
           const row = (this as any).getSelectedLast()?.[0]
           if (row === undefined) return true
           const rowData = (this as any).getSourceDataAtRow(row)
-          // Show if it's inactive OR marked for pending inactivation
           return (
             !rowData ||
             (rowData.status === STATUS_UUIDS.STATUS_ACTIVO && !rowData.isPendingInactivate)
           )
         }
       },
-      separator_dept: '---------',
-      go_to_departments: {
-        name: '<div class="flex items-center gap-2 text-zinc-600 font-semibold uppercase"><span class="inline-block h-4 w-4 i-lucide-map-pinned"></span> VER DEPARTAMENTOS</div>',
-        callback: function (_key: any, selection: any) {
-          const row = selection[0].start.row
-          const rowData = (this as any).getSourceDataAtRow(row)
-          if (rowData && rowData.id) {
-            const router = (window as any).$router || useRouter()
-            router.push({ path: '/config/master/department', query: { country: rowData.id } })
-          }
-        },
-        disabled: function () {
-          const row = (this as any).getSelectedLast()?.[0]
-          if (row === undefined) return true
-          const rowData = (this as any).getSourceDataAtRow(row)
-          return !rowData || rowData.isNew
-        }
-      },
       separator5: '---------',
       toggle_annul: {
         name: '<div class="flex items-center gap-2 text-rose-700 font-bold uppercase"><span class="inline-block h-4 w-4 i-lucide-trash-2"></span> ANULAR REGISTRO</div>',
         disabled: function () {
-          if (!can(COUNTRY_PERMISSIONS.ANNUL)) return true
+          if (!can(DEPARTMENT_PERMISSIONS.ANNUL)) return true
           const row = (this as any).getSelectedLast()?.[0]
           if (row === undefined) return true
           const rowData = (this as any).getSourceDataAtRow(row)
@@ -259,9 +229,7 @@ const hotSettings = ref({
               }
             }
           })
-          if (ids.length > 0) {
-            confirmAnnul(ids)
-          }
+          if (ids.length > 0) confirmAnnul(ids)
         }
       },
       separator6: '---------',
@@ -270,12 +238,10 @@ const hotSettings = ref({
         callback: function (_key: any, selection: any) {
           const row = selection[0].start.row
           const rowData = (this as any).getSourceDataAtRow(row)
-          if (rowData && rowData.id) {
-            openHistory(rowData.id)
-          }
+          if (rowData && rowData.id) openHistory(rowData.id)
         },
         disabled: function () {
-          if (!can(COUNTRY_PERMISSIONS.LOG)) return true
+          if (!can(DEPARTMENT_PERMISSIONS.LOG)) return true
           const row = (this as any).getSelectedLast()?.[0]
           if (row === undefined) return true
           const rowData = (this as any).getSourceDataAtRow(row)
@@ -290,11 +256,9 @@ const hotSettings = ref({
   manualRowMove: true,
   manualColumnResize: true,
   manualRowResize: true,
-  multiColumnSorting: {
-    indicator: true
-  },
+  multiColumnSorting: { indicator: true },
   fillHandle: true,
-  outsideClickDeselects: false, // Keeps selection active when clicking UI buttons
+  outsideClickDeselects: false,
 
   beforeCopy: (data: any[][], coords: any[]) => {
     data.forEach((row, r) => {
@@ -314,10 +278,14 @@ const hotSettings = ref({
   columns: [
     { data: 'code', title: 'CÓDIGO', readOnly: false },
     { data: 'name', title: 'NOMBRE', readOnly: false },
-    { data: 'abbreviation', title: 'ABR.', readOnly: false },
-    { data: 'iso_alpha_2', title: 'ISO2', readOnly: false, renderer: flagRenderer },
-    { data: 'iso_alpha_3', title: 'ISO3', readOnly: false },
-    { data: 'phone_prefix', title: 'NÚMERO DE PREFIJO', readOnly: false },
+    { data: 'abbreviation', title: 'ABREVIACIÓN', readOnly: false },
+    {
+      data: 'key_country',
+      title: 'PAÍS',
+      type: 'dropdown',
+      source: [] as string[], // Will be populated
+      readOnly: false
+    },
     {
       data: 'status',
       title: 'ESTADO',
@@ -328,56 +296,125 @@ const hotSettings = ref({
   ],
   licenseKey: 'non-commercial-and-evaluation',
   height: 600,
-  stretchH: 'all', // Restored to fill the width of the container
+  stretchH: 'all',
   autoWrapRow: true,
   autoWrapCol: true,
   rowHeights: 45,
   columnHeaderHeight: 45,
   cells: (row: number) => {
     const cellProperties: any = {}
-    const rowData = displayCountries.value[row]
-    // Base alignment classes
+    const rowData = displayDepartments.value[row]
     let classes = 'htCenter htMiddle '
-
     if (rowData) {
-      if (rowData.isPendingInactivate && rowData.status === STATUS_UUIDS.STATUS_INACTIVO) {
+      if (rowData.isPendingInactivate && rowData.status === STATUS_UUIDS.STATUS_INACTIVO)
         classes += 'pending-inactivate-row '
-      } else if (rowData.isNew) {
-        classes += 'new-row '
-      } else if (rowData.isDirty || rowData.isPendingInactivate) {
-        // Toggled for activation or simply edited
-        classes += 'dirty-row '
-      }
+      else if (rowData.isNew) classes += 'new-row '
+      else if (rowData.isDirty || rowData.isPendingInactivate) classes += 'dirty-row '
     }
     cellProperties.className = classes.trim()
     return cellProperties
   },
   afterChange: (changes: any) => {
     if (changes) {
-      // Mark as dirty if any change occurred
       changes.forEach(([row, prop, oldVal, newVal]: any) => {
-        if (oldVal !== newVal && displayCountries.value[row]) {
-          // Auto-uppercase for specific fields
-          if (
-            ['code', 'abbreviation', 'iso_alpha_2', 'iso_alpha_3'].includes(prop) &&
-            typeof newVal === 'string'
-          ) {
+        if (oldVal !== newVal && displayDepartments.value[row]) {
+          if (['code', 'abbreviation'].includes(prop) && typeof newVal === 'string') {
             const upper = newVal.toUpperCase()
             if (upper !== newVal) {
               const hot = uHandsontableRef.value?.getHotInstance()
               hot.setDataAtRowProp(row, prop, upper)
-              return // The next afterChange call will handle isDirty
+              return
             }
           }
-
-          displayCountries.value[row].isDirty = true
-          // Render table to apply color
+          // Special handling for country dropdown to map string back to ID if needed
+          // But Handsontable handles the value from 'source'.
+          displayDepartments.value[row].isDirty = true
           uHandsontableRef.value?.getHotInstance()?.render()
         }
       })
     }
   }
 })
+
+const fetchCountries = async () => {
+  if (!can(COUNTRY_PERMISSIONS.GET)) {
+    console.warn('[Permission] User cannot fetch countries for dropdown')
+    return
+  }
+  try {
+    const response = await fetch(`${import.meta.env.VUE_URL_BASE}/config-master/country/select/`, {
+      credentials: 'include'
+    })
+    const result = await response.json()
+    if (response.ok && result.status === 'success') {
+      countriesList.value = result.data.results
+      const countryNames = countriesList.value.map((c) => c.name)
+
+      // Update HOT source inside hotSettings ref
+      const countryCol = hotSettings.value.columns.find((c) => c.data === 'key_country')
+      if (countryCol) countryCol.source = countryNames
+
+      // FORCE UPDATE in Handsontable instance if it exists
+      const hot = uHandsontableRef.value?.getHotInstance()
+      if (hot) {
+        hot.updateSettings({
+          columns: hotSettings.value.columns
+        })
+      }
+
+      if (countryFilter.value) {
+        const parent = countriesList.value.find((c) => c.id === countryFilter.value)
+        if (parent) parentCountryName.value = parent.name
+      }
+    }
+  } catch (error) {
+    console.error('Fetch countries error:', error)
+  }
+}
+
+const fetchDepartments = async () => {
+  loading.value = true
+  try {
+    const body: Record<string, any> = {
+      page: page.value,
+      page_size: pageSize.value
+    }
+    if (countryFilter.value) body.country = countryFilter.value
+    if (statusFilter.value !== 'todos') body.status = statusFilter.value
+
+    const response = await fetch(`${import.meta.env.VUE_URL_BASE}/config-master/department/get/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') ?? '' },
+      credentials: 'include',
+      body: JSON.stringify(body)
+    })
+    const result = await response.json()
+    if (response.ok && result.status === 'success') {
+      departments.value = result.data.results.map((d: any) => ({
+        ...d,
+        key_country: d.country_name
+      }))
+      total.value = result.data.total
+    }
+  } catch (error) {
+    console.error('Fetch error:', error)
+    toast.add({
+      title: 'Error',
+      description: 'No se pudieron cargar los departamentos',
+      color: 'error'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+watch([page, pageSize], () => fetchDepartments())
+
+const setStatusFilter = (f: typeof statusFilter.value) => {
+  statusFilter.value = f
+  page.value = 1
+  fetchDepartments()
+}
 
 const confirmAnnul = (ids: string | string[]) => {
   recordsToAnnul.value = Array.isArray(ids) ? ids : [ids]
@@ -386,18 +423,15 @@ const confirmAnnul = (ids: string | string[]) => {
 
 const toggleAnnul = () => {
   if (recordsToAnnul.value.length === 0) return
-
   recordsToAnnul.value.forEach((id) => {
-    const index = countries.value.findIndex((c) => c.id === id)
+    const index = departments.value.findIndex((d) => d.id === id)
     if (index !== -1) {
-      const country = countries.value[index]
-      country.status = STATUS_UUIDS.STATUS_ANULADO
-      country.isPendingInactivate = true
+      departments.value[index].status = STATUS_UUIDS.STATUS_ANULADO
+      departments.value[index].isPendingInactivate = true
     }
   })
   uHandsontableRef.value?.getHotInstance()?.render()
   isAnnulModalOpen.value = false
-  recordsToAnnul.value = []
 }
 
 const openHistory = (id: string) => {
@@ -405,61 +439,23 @@ const openHistory = (id: string) => {
   isHistoryModalOpen.value = true
 }
 
-const fetchCountries = async () => {
-  loading.value = true
-  try {
-    const body: Record<string, any> = {
-      page: page.value,
-      page_size: pageSize.value
-    }
-    if (statusFilter.value !== 'todos') body.status = statusFilter.value
-
-    const response = await fetch(`${import.meta.env.VUE_URL_BASE}/config-master/country/get/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') ?? '' },
-      credentials: 'include',
-      body: JSON.stringify(body)
-    })
-    const result = await response.json()
-    if (response.ok && result.status === 'success') {
-      countries.value = result.data.results
-      total.value = result.data.total
-    }
-  } catch (error) {
-    console.error('Fetch error:', error)
-    toast.add({ title: 'Error', description: 'No se pudieron cargar los países', color: 'error' })
-  } finally {
-    loading.value = false
-  }
-}
-
-watch([page, pageSize], () => fetchCountries())
-
-const setStatusFilter = (f: typeof statusFilter.value) => {
-  statusFilter.value = f
-  page.value = 1
-  fetchCountries()
-}
-
 const addNewRow = () => {
-  const newCountry: Country = {
+  const newDept: Department = {
     code: '',
     name: '',
     abbreviation: '',
+    key_country: parentCountryName.value || '',
     status: STATUS_UUIDS.STATUS_ACTIVO,
     isNew: true,
     isDirty: true
   }
-  // Add to the main list (beginning) and reset to page 1
-  countries.value = [newCountry, ...countries.value]
+  departments.value = [newDept, ...departments.value]
   page.value = 1
   total.value++
-
-  // Highlight the first cell of the new row and render colors
   setTimeout(() => {
     const hot = uHandsontableRef.value?.getHotInstance()
     if (hot) {
-      hot.render() // Force render for colors
+      hot.render()
       hot.selectCell(0, 0)
     }
   }, 100)
@@ -468,41 +464,34 @@ const addNewRow = () => {
 const toggleStatus = (ids: string | string[]) => {
   const idList = Array.isArray(ids) ? ids : [ids]
   idList.forEach((id) => {
-    const index = countries.value.findIndex((c) => c.id === id)
+    const index = departments.value.findIndex((d) => d.id === id)
     if (index !== -1) {
-      const country = countries.value[index]
-      const isActivo = country.status === STATUS_UUIDS.STATUS_ACTIVO
-
-      // Toggle both status and pending flag
-      country.status = isActivo ? STATUS_UUIDS.STATUS_INACTIVO : STATUS_UUIDS.STATUS_ACTIVO
-      country.isPendingInactivate = !country.isPendingInactivate
+      const dept = departments.value[index]
+      const isActivo = dept.status === STATUS_UUIDS.STATUS_ACTIVO
+      dept.status = isActivo ? STATUS_UUIDS.STATUS_INACTIVO : STATUS_UUIDS.STATUS_ACTIVO
+      dept.isPendingInactivate = !dept.isPendingInactivate
     }
   })
-  // Re-render table to apply color class and update badge
   uHandsontableRef.value?.getHotInstance()?.render()
 }
 
 const saveChanges = async () => {
   if (dirtyCount.value === 0) {
-    toast.add({
-      title: 'Info',
-      description: 'No hay cambios pendientes por guardar',
-      color: 'info'
-    })
+    toast.add({ title: 'Info', description: 'No hay cambios pendientes', color: 'info' })
     return
   }
 
-  // Filter out pending inactivations for standard validation if they are being deleted
-  const newRows = countries.value.filter((c) => c.isNew)
-  const editedRows = countries.value.filter((c) => c.isDirty && !c.isNew && !c.isPendingInactivate)
-  const toInactivate = countries.value.filter((c) => c.isPendingInactivate)
+  const newRows = departments.value.filter((d) => d.isNew)
+  const editedRows = departments.value.filter(
+    (d) => d.isDirty && !d.isNew && !d.isPendingInactivate
+  )
+  const toInactivate = departments.value.filter((d) => d.isPendingInactivate)
 
-  // Validation for new and edited
-  const invalid = [...newRows, ...editedRows].some((c) => !c.code || !c.name || !c.abbreviation)
+  const invalid = [...newRows, ...editedRows].some((d) => !d.code || !d.name || !d.key_country)
   if (invalid) {
     toast.add({
       title: 'Advertencia',
-      description: 'Todos los campos son obligatorios para registros nuevos o editados',
+      description: 'Campos obligatorios faltantes',
       color: 'warning'
     })
     return
@@ -513,10 +502,11 @@ const saveChanges = async () => {
   let errorCount = 0
 
   try {
-    // 1. Process New Rows
     for (const row of newRows) {
+      const country = countriesList.value.find((c) => c.name === row.key_country)
+      const data = { ...row, key_country: country?.id }
       const response = await fetch(
-        `${import.meta.env.VUE_URL_BASE}/config-master/country/create/`,
+        `${import.meta.env.VUE_URL_BASE}/config-master/department/create/`,
         {
           method: 'POST',
           headers: {
@@ -524,17 +514,18 @@ const saveChanges = async () => {
             'X-CSRFToken': getCookie('csrftoken') || ''
           },
           credentials: 'include',
-          body: JSON.stringify(row)
+          body: JSON.stringify(data)
         }
       )
       if (response.ok) successCount++
       else errorCount++
     }
 
-    // 2. Process Edited Rows
     for (const row of editedRows) {
+      const country = countriesList.value.find((c) => c.name === row.key_country)
+      const data = { ...row, key_country: country?.id }
       const response = await fetch(
-        `${import.meta.env.VUE_URL_BASE}/config-master/country/update/`,
+        `${import.meta.env.VUE_URL_BASE}/config-master/department/update/`,
         {
           method: 'PATCH',
           headers: {
@@ -542,7 +533,7 @@ const saveChanges = async () => {
             'X-CSRFToken': getCookie('csrftoken') || ''
           },
           credentials: 'include',
-          body: JSON.stringify(row)
+          body: JSON.stringify(data)
         }
       )
       if (response.ok) successCount++
@@ -569,7 +560,7 @@ const saveChanges = async () => {
     for (const { action, ids } of massActions) {
       if (ids.length === 0) continue
       const response = await fetch(
-        `${import.meta.env.VUE_URL_BASE}/config-master/country/${action}/`,
+        `${import.meta.env.VUE_URL_BASE}/config-master/department/${action}/`,
         {
           method: 'PATCH',
           headers: {
@@ -590,12 +581,12 @@ const saveChanges = async () => {
         description: `${successCount} cambios procesados correctamente`,
         color: 'success'
       })
-      fetchCountries()
+      fetchDepartments()
     }
     if (errorCount > 0) {
       toast.add({
         title: 'Error',
-        description: `${errorCount} cambios fallaron. Revisa los datos e intenta nuevamente.`,
+        description: `${errorCount} cambios fallaron. Revisa los datos.`,
         color: 'error'
       })
     }
@@ -608,21 +599,15 @@ const saveChanges = async () => {
 }
 
 const confirmDiscard = () => {
-  if (dirtyCount.value > 0) {
-    isDiscardModalOpen.value = true
-  } else {
+  if (dirtyCount.value > 0) isDiscardModalOpen.value = true
+  else
     toast.add({ title: 'Aviso', description: 'No hay cambios para descartar', color: 'secondary' })
-  }
 }
 
 const discardChanges = () => {
-  fetchCountries()
+  fetchDepartments()
   isDiscardModalOpen.value = false
-  toast.add({
-    title: 'Descartado',
-    description: 'Cambios no guardados han sido descartados',
-    color: 'neutral'
-  })
+  toast.add({ title: 'Descartado', description: 'Cambios descartados', color: 'neutral' })
 }
 
 const clearFilters = () => {
@@ -633,96 +618,80 @@ const clearFilters = () => {
     filtersPlugin.filter()
     toast.add({
       title: 'Filtros limpiados',
-      description: 'Se han restablecido todos los filtros de la tabla',
+      description: 'Se han restablecido los filtros',
       color: 'info'
     })
   }
 }
 
-// Excel Handlers
-const onExport = () => {
+const onExport = () =>
   downloadExcel(
-    `${import.meta.env.VUE_URL_BASE}/config-master/country/export/`,
-    'paises_export.xlsx'
+    `${import.meta.env.VUE_URL_BASE}/config-master/department/export/`,
+    'departamentos.xlsx'
   )
-}
-
-const onDownloadTemplate = () => {
+const onDownloadTemplate = () =>
   downloadExcel(
-    `${import.meta.env.VUE_URL_BASE}/config-master/country/template/`,
-    'plantilla_paises.xlsx'
+    `${import.meta.env.VUE_URL_BASE}/config-master/department/template/`,
+    'plantilla_departamentos.xlsx'
   )
-}
-
-const isValidating = ref(false)
-const validatingMsg = ref('')
 
 const onFileSelected = async (file: File) => {
   currentFile.value = file
-
-  // Phase: Analyzing
   isValidating.value = true
   validatingMsg.value = 'Analizando documento...'
 
-  // Artificial delay for premium feel or just proceed to validation
   await new Promise((resolve) => setTimeout(resolve, 800))
 
   const result = await validateExcel(
-    `${import.meta.env.VUE_URL_BASE}/config-master/country/import/`,
+    `${import.meta.env.VUE_URL_BASE}/config-master/department/import/`,
     file
   )
 
   if (result) {
-    // Phase: Validation Complete
     validatingMsg.value = 'Validación completa'
-    await new Promise((resolve) => setTimeout(resolve, 600)) // Short delay to see the "Complete" message
-
+    await new Promise((resolve) => setTimeout(resolve, 600))
     previewData.value = result.rows
   }
-
   isValidating.value = false
 }
 
 const onConfirmImport = async () => {
   if (!currentFile.value) return
-
   const success = await uploadExcel(
-    `${import.meta.env.VUE_URL_BASE}/config-master/country/import/`,
+    `${import.meta.env.VUE_URL_BASE}/config-master/department/import/`,
     currentFile.value
   )
-
   if (success) {
     isImportModalOpen.value = false
-    fetchCountries()
+    fetchDepartments()
   }
 }
 
 const triggerImport = () => {
-  previewData.value = [] // Reset preview to show the Upload step
+  previewData.value = []
   isImportModalOpen.value = true
 }
 
-// Watch for page changes - NO longer fetches from backend
+// Watch for page changes
 watch(page, () => {
-  // Just force re-render if needed, but displayCountries computed handles it
   uHandsontableRef.value?.getHotInstance()?.render()
 })
 
 onMounted(() => {
   fetchStatuses()
   fetchCountries()
+  fetchDepartments()
 })
 </script>
 
 <template>
-  <!-- Hidden div to ensure UnoCSS bundles the icons used in JS strings -->
   <div class="hidden">
     <div class="i-lucide-trash-2 text-rose-700" />
     <div class="i-lucide-user-x text-rose-600" />
     <div class="i-lucide-check-circle text-green-600" />
     <div class="i-lucide-history text-info-600" />
   </div>
-  <UDashboardPanel id="countries">
+  <UDashboardPanel id="departments">
     <template #header>
       <UDashboardNavbar :ui="{ right: 'gap-3' }">
         <template #leading>
@@ -739,11 +708,19 @@ onMounted(() => {
             >
             <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-zinc-300 dark:text-zinc-700" />
             <span class="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight"
-              >País</span
+              >Departamento</span
             >
+            <template v-if="parentCountryName">
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="w-4 h-4 text-zinc-300 dark:text-zinc-700"
+              />
+              <UBadge color="primary" variant="subtle" size="xs" class="font-bold uppercase">
+                {{ parentCountryName }}
+              </UBadge>
+            </template>
           </div>
         </template>
-
         <template #right>
           <UTooltip text="Notificaciones">
             <UButton
@@ -757,14 +734,12 @@ onMounted(() => {
               </UChip>
             </UButton>
           </UTooltip>
-
           <UserMenu />
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <!-- Unified Content Card -->
       <div
         class="flex-1 flex flex-col bg-white dark:bg-zinc-900 rounded-1xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden relative"
       >
@@ -803,16 +778,16 @@ onMounted(() => {
           class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/50"
         >
           <div class="flex items-center gap-4">
-            <h2 class="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
-              Listado de países
+            <h2
+              class="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight leading-tight"
+            >
+              Listado de departamentos
             </h2>
-
-            <!-- Global Search -->
             <div class="relative w-64">
               <UInput
                 v-model="searchQuery"
                 icon="i-lucide-search"
-                placeholder="Buscar país..."
+                placeholder="Buscar departamento..."
                 class="rounded-xl shadow-sm"
                 variant="outline"
                 color="neutral"
@@ -901,7 +876,7 @@ onMounted(() => {
           </div>
 
           <div class="flex gap-4 items-center">
-            <UTooltip v-if="can(COUNTRY_PERMISSIONS.EXPORT)" text="Exportar a Excel">
+            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.EXPORT)" text="Exportar a Excel">
               <UButton
                 icon="i-lucide-file-down"
                 color="info"
@@ -912,8 +887,7 @@ onMounted(() => {
                 @click="onExport"
               />
             </UTooltip>
-
-            <UTooltip v-if="can(COUNTRY_PERMISSIONS.IMPORT)" text="Importar desde Excel">
+            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.IMPORT)" text="Importar desde Excel">
               <UButton
                 icon="i-lucide-file-up"
                 color="secondary"
@@ -924,8 +898,7 @@ onMounted(() => {
                 @click="triggerImport"
               />
             </UTooltip>
-
-            <UTooltip v-if="can(COUNTRY_PERMISSIONS.TEMPLATE)" text="Descargar plantilla">
+            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.TEMPLATE)" text="Descargar plantilla">
               <UButton
                 icon="i-lucide-file-spreadsheet"
                 color="neutral"
@@ -936,7 +909,6 @@ onMounted(() => {
                 @click="onDownloadTemplate"
               />
             </UTooltip>
-
             <UTooltip text="Limpiar filtros">
               <UButton
                 icon="i-lucide-filter-x"
@@ -947,7 +919,6 @@ onMounted(() => {
                 @click="clearFilters"
               />
             </UTooltip>
-
             <UTooltip text="Refrescar datos">
               <UButton
                 icon="i-lucide-refresh-cw"
@@ -956,11 +927,11 @@ onMounted(() => {
                 size="xl"
                 class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
                 :loading="loading"
-                @click="fetchCountries"
+                @click="fetchDepartments"
               />
             </UTooltip>
 
-            <UTooltip v-if="can(COUNTRY_PERMISSIONS.CREATE)" text="Agregar fila">
+            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.CREATE)" text="Agregar fila">
               <UButton
                 icon="i-lucide-list-plus"
                 color="success"
@@ -972,7 +943,7 @@ onMounted(() => {
             </UTooltip>
 
             <UTooltip
-              v-if="can(COUNTRY_PERMISSIONS.CREATE) || can(COUNTRY_PERMISSIONS.UPDATE)"
+              v-if="can(DEPARTMENT_PERMISSIONS.CREATE) || can(DEPARTMENT_PERMISSIONS.UPDATE)"
               text="Guardar cambios"
             >
               <UChip
@@ -1009,86 +980,15 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Discard Confirmation Modal (Nuxt UI v4 Pattern) -->
-        <UModal
-          v-model:open="isDiscardModalOpen"
-          title="Confirmar descarte"
-          description="¿Estás seguro de que deseas descartar todos los cambios no guardados en la tabla?"
-          :ui="{ footer: 'justify-end' }"
-        >
-          <template #body>
-            <div class="flex items-center gap-4 py-2">
-              <div class="p-3 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600">
-                <UIcon name="i-lucide-alert-triangle" class="w-8 h-8" />
-              </div>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-                Los datos volverán a su estado original y esta acción no se puede deshacer.
-              </p>
-            </div>
-          </template>
+        <div class="flex-1 overflow-hidden p-4 relative">
+          <UHandsontable
+            ref="uHandsontableRef"
+            :settings="hotSettings"
+            :data="displayDepartments"
+          />
 
-          <template #footer>
-            <UButton
-              label="No"
-              color="neutral"
-              variant="outline"
-              class="font-bold px-6 rounded-xl"
-              @click="isDiscardModalOpen = false"
-            />
-            <UButton
-              label="SÍ, DESCARTAR"
-              color="error"
-              variant="solid"
-              class="font-black px-6 rounded-xl shadow-md"
-              @click="discardChanges"
-            />
-          </template>
-        </UModal>
-
-        <!-- Annul Confirmation Modal -->
-        <UModal
-          v-model:open="isAnnulModalOpen"
-          title="Confirmar anulación"
-          description="¿Estás seguro de que deseas ANULAR este registro?"
-          :ui="{ footer: 'justify-end' }"
-        >
-          <template #body>
-            <div class="flex items-center gap-4 py-2">
-              <div class="p-3 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700">
-                <UIcon name="i-lucide-trash-2" class="w-8 h-8" />
-              </div>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-                Esta acción marcará el registro como ANULADO. Deberás guardar los cambios para
-                confirmar.
-              </p>
-            </div>
-          </template>
-
-          <template #footer>
-            <UButton
-              label="No"
-              color="neutral"
-              variant="outline"
-              class="font-bold px-6 rounded-xl"
-              @click="isAnnulModalOpen = false"
-            />
-            <UButton
-              label="SÍ, ANULAR"
-              color="error"
-              variant="solid"
-              class="font-black px-6 rounded-xl shadow-md"
-              @click="toggleAnnul"
-            />
-          </template>
-        </UModal>
-
-        <!-- Unified Grid Body - Now with better responsiveness -->
-        <div class="flex-1 p-4 bg-white dark:bg-zinc-950 overflow-hidden relative">
-          <UHandsontable ref="uHandsontableRef" :settings="hotSettings" :data="displayCountries" />
-
-          <!-- Empty State Overlay -->
           <div
-            v-if="!loading && countries.length === 0"
+            v-if="!loading && departments.length === 0"
             class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm z-10"
           >
             <div class="p-6 rounded-full bg-zinc-50 dark:bg-zinc-900 mb-4 shadow-inner">
@@ -1100,29 +1000,28 @@ onMounted(() => {
             <h3 class="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
               No hay datos a mostrar
             </h3>
-            <p class="text-zinc-500 dark:text-zinc-400 mt-2 font-medium">
+            <p class="text-zinc-500 dark:text-zinc-400 mt-2 font-medium tracking-tight">
               Agrega un nuevo registro o importa desde Excel para comenzar.
             </p>
             <UButton
-              label="AGREGAR PRIMER PAÍS"
+              label="AGREGAR PRIMER DEPARTAMENTO"
               icon="i-lucide-plus"
               color="success"
               variant="solid"
               size="lg"
-              class="mt-6 font-black rounded-xl shadow-lg ring-4 ring-success-500/10"
+              class="mt-6 font-black rounded-xl shadow-lg ring-4 ring-success-500/10 transition-all hover:scale-105"
               @click="addNewRow"
             />
           </div>
         </div>
 
-        <!-- Pagination Footer -->
         <div
           class="flex items-center justify-between p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900"
         >
           <div class="text-sm font-medium text-zinc-500 dark:text-zinc-400">
             Mostrando
-            <span class="text-primary-600 font-bold">{{ displayCountries.length }}</span> de
-            <span class="font-bold text-zinc-900 dark:text-white">{{ countries.length }}</span>
+            <span class="text-primary-600 font-bold">{{ displayDepartments.length }}</span> de
+            <span class="font-bold text-zinc-900 dark:text-white">{{ departments.length }}</span>
             registros
           </div>
           <div class="flex items-center gap-6">
@@ -1146,29 +1045,97 @@ onMounted(() => {
             />
           </div>
         </div>
+
+        <!-- Modals moved inside #body for layout parity -->
+        <UModal
+          v-model:open="isDiscardModalOpen"
+          title="Confirmar descarte"
+          description="¿Estás seguro de que deseas descartar todos los cambios no guardados en la tabla?"
+          :ui="{ footer: 'justify-end' }"
+        >
+          <template #body>
+            <div class="flex items-center gap-4 py-2">
+              <div class="p-3 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600">
+                <UIcon name="i-lucide-alert-triangle" class="w-8 h-8" />
+              </div>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                Los datos volverán a su estado original y esta acción no se puede deshacer.
+              </p>
+            </div>
+          </template>
+          <template #footer>
+            <UButton
+              label="No"
+              color="neutral"
+              variant="outline"
+              class="font-bold px-6 rounded-xl"
+              @click="isDiscardModalOpen = false"
+            />
+            <UButton
+              label="SÍ, DESCARTAR"
+              color="error"
+              variant="solid"
+              class="font-black px-6 rounded-xl shadow-md"
+              @click="discardChanges"
+            />
+          </template>
+        </UModal>
+
+        <UModal
+          v-model:open="isAnnulModalOpen"
+          title="Confirmar anulación"
+          description="¿Estás seguro de que deseas ANULAR este registro?"
+          :ui="{ footer: 'justify-end' }"
+        >
+          <template #body>
+            <div class="flex items-center gap-4 py-2">
+              <div class="p-3 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700">
+                <UIcon name="i-lucide-trash-2" class="w-8 h-8" />
+              </div>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                Esta acción marcará el registro como ANULADO. Deberás guardar los cambios para
+                confirmar.
+              </p>
+            </div>
+          </template>
+          <template #footer>
+            <UButton
+              label="No"
+              color="neutral"
+              variant="outline"
+              class="font-bold px-6 rounded-xl"
+              @click="isAnnulModalOpen = false"
+            />
+            <UButton
+              label="SÍ, ANULAR"
+              color="error"
+              variant="solid"
+              class="font-black px-6 rounded-xl shadow-md"
+              @click="toggleAnnul"
+            />
+          </template>
+        </UModal>
+
+        <UImportModal
+          v-model:open="isImportModalOpen"
+          title="Importación de Departamentos"
+          description="Selecciona y valida tu archivo Excel antes de procesar."
+          :data="previewData"
+          :headers="['CÓDIGO', 'NOMBRE', 'ABREVIACIÓN', 'PAÍS', 'ESTADO']"
+          :validating="isValidating"
+          :validating-message="validatingMsg"
+          :importing="excelLoading"
+          @confirm="onConfirmImport"
+          @file-selected="onFileSelected"
+        />
+
+        <UHistoryModal
+          v-model:open="isHistoryModalOpen"
+          :record-id="selectedRecordId"
+          base-url="/config-master/department"
+          title="Historial de Cambios - Departamento"
+        />
       </div>
-
-      <!-- Success Modal for Import Preview (Centralized Step-by-Step) -->
-      <UImportModal
-        v-model:open="isImportModalOpen"
-        title="Importación de Países"
-        description="Selecciona y valida tu archivo Excel antes de procesar."
-        :data="previewData"
-        :headers="['CÓDIGO', 'NOMBRE', 'ABREVIACIÓN', 'ESTADO']"
-        :validating="isValidating"
-        :validating-message="validatingMsg"
-        :importing="excelLoading"
-        @confirm="onConfirmImport"
-        @file-selected="onFileSelected"
-      />
-
-      <!-- Reusable History Modal -->
-      <UHistoryModal
-        v-model:open="isHistoryModalOpen"
-        :record-id="selectedRecordId"
-        base-url="/config-master/country"
-        title="Historial de Cambios - País"
-      />
     </template>
   </UDashboardPanel>
 </template>

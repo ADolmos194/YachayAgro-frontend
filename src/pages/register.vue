@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import * as z from 'zod'
-import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
+
+type AuthFormField = {
+  name: string
+  type: string
+  label?: string
+  placeholder?: string
+  required?: boolean
+  description?: string
+  help?: string
+  hint?: string
+}
+
+type FormSubmitEvent<T> = SubmitEvent & { data: T }
 import { useRouter } from 'vue-router'
 
 import { getCookie } from '../utils/cookies'
@@ -8,37 +20,43 @@ import { getCookie } from '../utils/cookies'
 const toast = useToast()
 const router = useRouter()
 
-const fields: AuthFormField[] = [{
-  name: 'username',
-  type: 'text',
-  label: 'Username',
-  placeholder: 'Enter your username',
-  required: true
-}, {
-  name: 'first_name',
-  type: 'text',
-  label: 'First Name',
-  placeholder: 'Enter your first name',
-  required: true
-}, {
-  name: 'last_name',
-  type: 'text',
-  label: 'Last Name',
-  placeholder: 'Enter your last name',
-  required: true
-}, {
-  name: 'email',
-  type: 'email',
-  label: 'Email',
-  placeholder: 'Enter your email',
-  required: true
-}, {
-  name: 'password',
-  label: 'Password',
-  type: 'password',
-  placeholder: 'Enter your password',
-  required: true
-}]
+const fields: AuthFormField[] = [
+  {
+    name: 'username',
+    type: 'text',
+    label: 'Username',
+    placeholder: 'Enter your username',
+    required: true
+  },
+  {
+    name: 'first_name',
+    type: 'text',
+    label: 'First Name',
+    placeholder: 'Enter your first name',
+    required: true
+  },
+  {
+    name: 'last_name',
+    type: 'text',
+    label: 'Last Name',
+    placeholder: 'Enter your last name',
+    required: true
+  },
+  {
+    name: 'email',
+    type: 'email',
+    label: 'Email',
+    placeholder: 'Enter your email',
+    required: true
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    placeholder: 'Enter your password',
+    required: true
+  }
+]
 
 const schema = z.object({
   username: z.string().min(3, 'Must be at least 3 characters'),
@@ -56,7 +74,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken') || '',
+        'X-CSRFToken': getCookie('csrftoken') || ''
       },
       credentials: 'include',
       body: JSON.stringify(payload.data)
@@ -77,11 +95,13 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       // Show errors as toasts in top-right corner
       let description = ''
       if (typeof result.data === 'object' && result.data !== null) {
-          description = Object.entries(result.data).map(([key, val]) => `${key}: ${val}`).join('\n')
+        description = Object.entries(result.data)
+          .map(([key, val]) => `${key}: ${val}`)
+          .join('\n')
       } else {
-          description = result.message || 'Registration failed'
+        description = result.message || 'Registration failed'
       }
-        
+
       toast.add({
         title: 'Error creating account',
         description,
@@ -101,24 +121,39 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-    <UPageCard class="w-full max-w-md">
-      <UAuthForm
-        :schema="schema"
-        :fields="fields"
-        title="Create an account"
-        icon="i-lucide-user-plus"
-        @submit="onSubmit"
-      >
+  <div
+    class="flex flex-col items-center justify-center min-h-screen gap-6 p-4 bg-zinc-50 dark:bg-zinc-950 overflow-hidden relative"
+  >
+    <!-- Brand Background Logo (Watermark effect) -->
+    <div
+      class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] dark:opacity-[0.1]"
+    >
+      <img
+        src="/logo_yachay_agro.png"
+        alt=""
+        class="w-[800px] h-[800px] object-contain blur-[2px]"
+      />
+    </div>
+
+    <!-- Subtle Background Accents -->
+    <div
+      class="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] -mr-48 -mt-48"
+    />
+    <div
+      class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[120px] -ml-48 -mb-48"
+    />
+
+    <UPageCard
+      class="w-full max-w-md relative z-10 shadow-2xl border-zinc-200/50 dark:border-zinc-800/50 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md"
+    >
+      <UAuthForm :schema="schema" :fields="fields" title="Create an account" @submit="onSubmit">
         <template #description>
-          Already have an account? <ULink to="/login" class="text-primary font-medium">
-            Log in
-          </ULink>.
+          Already have an account?
+          <ULink to="/login" class="text-primary font-medium"> Log in </ULink>.
         </template>
         <template #footer>
-          By signing up, you agree to our <ULink to="#" class="text-primary font-medium">
-            Terms of Service
-          </ULink>.
+          By signing up, you agree to our
+          <ULink to="#" class="text-primary font-medium"> Terms of Service </ULink>.
         </template>
       </UAuthForm>
     </UPageCard>

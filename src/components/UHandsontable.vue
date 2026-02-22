@@ -1,47 +1,48 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import { HotTable } from '@handsontable/vue3';
-import { registerAllModules } from 'handsontable/registry';
+import { ref, onMounted, watch } from 'vue'
+import { HotTable } from '@handsontable/vue3'
+import { registerAllModules } from 'handsontable/registry'
 
 // Import mandatory Handsontable styles
-import 'handsontable/styles/handsontable.css';
-import 'handsontable/styles/ht-theme-main.css';
+import 'handsontable/styles/handsontable.css'
+import 'handsontable/styles/ht-theme-main.css'
 
 // Register all modules
-registerAllModules();
+registerAllModules()
 
 const props = defineProps<{
-  settings: any,
+  settings: any
   data: any[]
-}>();
+}>()
 
-const hotTableRef = ref<InstanceType<typeof HotTable> | null>(null);
+const hotTableRef = ref<InstanceType<typeof HotTable> | null>(null)
 
 // Manually load data on change to ensure reactivity
-watch(() => props.data, (newData) => {
-  if (hotTableRef.value?.hotInstance) {
-    hotTableRef.value.hotInstance.loadData(newData);
-  }
-}, { deep: true });
+watch(
+  () => props.data,
+  (newData) => {
+    if (hotTableRef.value?.hotInstance) {
+      hotTableRef.value.hotInstance.loadData(newData)
+    }
+  },
+  { deep: true }
+)
 
 // Initial load
 onMounted(() => {
   if (props.data && props.data.length > 0 && hotTableRef.value?.hotInstance) {
-    hotTableRef.value.hotInstance.loadData(props.data);
+    hotTableRef.value.hotInstance.loadData(props.data)
   }
-});
+})
 
 defineExpose({
   getHotInstance: () => hotTableRef.value?.hotInstance
-});
+})
 </script>
 
 <template>
   <div class="handsontable-wrapper w-full h-full relative overflow-hidden">
-    <HotTable 
-      ref="hotTableRef" 
-      :settings="props.settings" 
-    />
+    <HotTable ref="hotTableRef" :settings="props.settings" />
   </div>
 </template>
 

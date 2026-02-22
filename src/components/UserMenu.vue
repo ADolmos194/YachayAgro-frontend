@@ -15,7 +15,25 @@ const appConfig = useAppConfig()
 const { userFullName, logout } = useAuth()
 const router = useRouter()
 
-const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
+const colors = [
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'purple',
+  'fuchsia',
+  'pink',
+  'rose'
+]
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
 const handleLogout = async () => {
@@ -23,122 +41,155 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const items = computed<DropdownMenuItem[][]>(() => ([[{
-  type: 'label',
-  label: userFullName.value || 'Acceso',
-  avatar: {
-    src: `https://ui-avatars.com/api/?name=${userFullName.value || 'U'}&background=random`,
-    alt: userFullName.value
-  }
-}], [{
-  label: 'Profile',
-  icon: 'i-lucide-user'
-}, {
-  label: 'Billing',
-  icon: 'i-lucide-credit-card'
-}, {
-  label: 'Settings',
-  icon: 'i-lucide-settings',
-  to: '/settings'
-}], [{
-  label: 'Theme',
-  icon: 'i-lucide-palette',
-  children: [{
-    label: 'Primary',
-    slot: 'chip',
-    chip: appConfig.ui.colors.primary,
-    content: {
-      align: 'center',
-      collisionPadding: 16
-    },
-    children: colors.map(color => ({
-      label: color,
-      chip: color,
-      slot: 'chip',
-      checked: appConfig.ui.colors.primary === color,
-      type: 'checkbox',
-      onSelect: (e) => {
-        e.preventDefault()
-
-        appConfig.ui.colors.primary = color
+const items = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      type: 'label',
+      label: userFullName.value || 'Acceso',
+      avatar: {
+        src: `https://ui-avatars.com/api/?name=${userFullName.value || 'U'}&background=random`,
+        alt: userFullName.value
       }
-    }))
-  }, {
-    label: 'Neutral',
-    slot: 'chip',
-    chip: appConfig.ui.colors.neutral === 'neutral' ? 'old-neutral' : appConfig.ui.colors.neutral,
-    content: {
-      align: 'end',
-      collisionPadding: 16
-    },
-    children: neutrals.map(color => ({
-      label: color,
-      chip: color === 'neutral' ? 'old-neutral' : color,
-      slot: 'chip',
-      type: 'checkbox',
-      checked: appConfig.ui.colors.neutral === color,
-      onSelect: (e) => {
-        e.preventDefault()
-
-        appConfig.ui.colors.neutral = color
-      }
-    }))
-  }]
-}, {
-  label: 'Appearance',
-  icon: 'i-lucide-sun-moon',
-  children: [{
-    label: 'Light',
-    icon: 'i-lucide-sun',
-    type: 'checkbox',
-    checked: colorMode.value === 'light',
-    onSelect(e: Event) {
-      e.preventDefault()
-
-      colorMode.value = 'light'
     }
-  }, {
-    label: 'Dark',
-    icon: 'i-lucide-moon',
-    type: 'checkbox',
-    checked: colorMode.value === 'dark',
-    onUpdateChecked(checked: boolean) {
-      if (checked) {
-        colorMode.value = 'dark'
-      }
+  ],
+  [
+    {
+      label: 'Profile',
+      icon: 'i-lucide-user'
     },
-    onSelect(e: Event) {
-      e.preventDefault()
+    {
+      label: 'Billing',
+      icon: 'i-lucide-credit-card'
+    },
+    {
+      label: 'Settings',
+      icon: 'i-lucide-settings',
+      to: '/settings'
     }
-  }]
-}], [{
-  label: 'Templates',
-  icon: 'i-lucide-layout-template',
-  children: [{
-    label: 'Starter',
-    to: 'https://starter-vue-template.nuxt.dev/'
-  }, {
-    label: 'Dashboard',
-    to: 'https://dashboard-vue-template.nuxt.dev/',
-    color: 'primary',
-    checked: true,
-    type: 'checkbox'
-  }]
-}], [{
-  label: 'Documentation',
-  icon: 'i-lucide-book-open',
-  to: 'https://ui.nuxt.com/docs/getting-started/installation/vue',
-  target: '_blank'
-}, {
-  label: 'GitHub repository',
-  icon: 'simple-icons:github',
-  to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
-  target: '_blank'
-}], [{
-  label: 'Log out',
-  icon: 'i-lucide-log-out',
-  onSelect: handleLogout
-}]]))
+  ],
+  [
+    {
+      label: 'Theme',
+      icon: 'i-lucide-palette',
+      children: [
+        {
+          label: 'Primary',
+          slot: 'chip',
+          chip: appConfig.ui.colors.primary,
+          content: {
+            align: 'center',
+            collisionPadding: 16
+          },
+          children: colors.map((color) => ({
+            label: color,
+            chip: color,
+            slot: 'chip',
+            checked: appConfig.ui.colors.primary === color,
+            type: 'checkbox',
+            onSelect: (e) => {
+              e.preventDefault()
+
+              appConfig.ui.colors.primary = color
+            }
+          }))
+        },
+        {
+          label: 'Neutral',
+          slot: 'chip',
+          chip:
+            appConfig.ui.colors.neutral === 'neutral' ? 'old-neutral' : appConfig.ui.colors.neutral,
+          content: {
+            align: 'end',
+            collisionPadding: 16
+          },
+          children: neutrals.map((color) => ({
+            label: color,
+            chip: color === 'neutral' ? 'old-neutral' : color,
+            slot: 'chip',
+            type: 'checkbox',
+            checked: appConfig.ui.colors.neutral === color,
+            onSelect: (e) => {
+              e.preventDefault()
+
+              appConfig.ui.colors.neutral = color
+            }
+          }))
+        }
+      ]
+    },
+    {
+      label: 'Appearance',
+      icon: 'i-lucide-sun-moon',
+      children: [
+        {
+          label: 'Light',
+          icon: 'i-lucide-sun',
+          type: 'checkbox',
+          checked: colorMode.value === 'light',
+          onSelect(e: Event) {
+            e.preventDefault()
+
+            colorMode.value = 'light'
+          }
+        },
+        {
+          label: 'Dark',
+          icon: 'i-lucide-moon',
+          type: 'checkbox',
+          checked: colorMode.value === 'dark',
+          onUpdateChecked(checked: boolean) {
+            if (checked) {
+              colorMode.value = 'dark'
+            }
+          },
+          onSelect(e: Event) {
+            e.preventDefault()
+          }
+        }
+      ]
+    }
+  ],
+  [
+    {
+      label: 'Templates',
+      icon: 'i-lucide-layout-template',
+      children: [
+        {
+          label: 'Starter',
+          to: 'https://starter-vue-template.nuxt.dev/'
+        },
+        {
+          label: 'Dashboard',
+          to: 'https://dashboard-vue-template.nuxt.dev/',
+          color: 'primary',
+          checked: true,
+          type: 'checkbox'
+        }
+      ]
+    }
+  ],
+  [
+    {
+      label: 'Documentation',
+      icon: 'i-lucide-book-open',
+      to: 'https://ui.nuxt.com/docs/getting-started/installation/vue',
+      target: '_blank'
+    },
+    {
+      label: 'GitHub repository',
+      icon: 'simple-icons:github',
+      to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
+      target: '_blank'
+    }
+  ],
+  [
+    {
+      label: 'Log out',
+      icon: 'i-lucide-log-out',
+      onSelect: handleLogout
+    }
+  ]
+])
 </script>
 
 <template>

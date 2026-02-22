@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
+import UserMenu from '../components/UserMenu.vue'
 import { sub } from 'date-fns'
-import type { DropdownMenuItem } from '@nuxt/ui'
 import { useDashboard } from '../composables/useDashboard'
 import type { Period, Range } from '../types'
 
 const { isNotificationsSlideoverOpen } = useDashboard()
-
-const items = [[]] satisfies DropdownMenuItem[][]
 
 const range = shallowRef<Range>({
   start: sub(new Date(), { days: 14 }),
@@ -38,9 +36,7 @@ const period = ref<Period>('daily')
             </UButton>
           </UTooltip>
 
-          <UDropdownMenu :items="items">
-            <UButton icon="i-lucide-plus" size="md" class="rounded-full" />
-          </UDropdownMenu>
+          <UserMenu />
         </template>
       </UDashboardNavbar>
 

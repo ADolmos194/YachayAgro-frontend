@@ -19,13 +19,17 @@ const router = createRouter({
       component: () => import('./pages/config/master/country.vue')
     },
     {
+      path: '/config/master/department',
+      component: () => import('./pages/config/master/department.vue')
+    },
+    {
       path: '/settings',
       component: () => import('./pages/settings.vue'),
       children: [
         { path: '', component: () => import('./pages/settings/index.vue') },
         { path: 'members', component: () => import('./pages/settings/members.vue') },
         { path: 'notifications', component: () => import('./pages/settings/notifications.vue') },
-        { path: 'security', component: () => import('./pages/settings/security.vue') },
+        { path: 'security', component: () => import('./pages/settings/security.vue') }
       ]
     }
   ],

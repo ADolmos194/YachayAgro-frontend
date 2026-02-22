@@ -16,38 +16,45 @@ function formatCurrency(value: number): string {
   })
 }
 
-const baseStats = [{
-  title: 'Conversions',
-  icon: 'i-lucide-chart-pie',
-  minValue: 1000,
-  maxValue: 2000,
-  minVariation: -10,
-  maxVariation: 20
-}, {
-  title: 'Revenue',
-  icon: 'i-lucide-circle-dollar-sign',
-  minValue: 200000,
-  maxValue: 500000,
-  minVariation: -20,
-  maxVariation: 30,
-  formatter: formatCurrency
-}]
+const baseStats = [
+  {
+    title: 'Conversions',
+    icon: 'i-lucide-chart-pie',
+    minValue: 1000,
+    maxValue: 2000,
+    minVariation: -10,
+    maxVariation: 20
+  },
+  {
+    title: 'Revenue',
+    icon: 'i-lucide-circle-dollar-sign',
+    minValue: 200000,
+    maxValue: 500000,
+    minVariation: -20,
+    maxVariation: 30,
+    formatter: formatCurrency
+  }
+]
 
 const stats = ref<Stat[]>([])
 
-watch([() => props.period, () => props.range], () => {
-  stats.value = baseStats.map((stat) => {
-    const value = randomInt(stat.minValue, stat.maxValue)
-    const variation = randomInt(stat.minVariation, stat.maxVariation)
+watch(
+  [() => props.period, () => props.range],
+  () => {
+    stats.value = baseStats.map((stat) => {
+      const value = randomInt(stat.minValue, stat.maxValue)
+      const variation = randomInt(stat.minVariation, stat.maxVariation)
 
-    return {
-      title: stat.title,
-      icon: stat.icon,
-      value: stat.formatter ? stat.formatter(value) : value,
-      variation
-    }
-  })
-}, { immediate: true })
+      return {
+        title: stat.title,
+        icon: stat.icon,
+        value: stat.formatter ? stat.formatter(value) : value,
+        variation
+      }
+    })
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -71,11 +78,7 @@ watch([() => props.period, () => props.range], () => {
           {{ stat.value }}
         </span>
 
-        <UBadge
-          :color="stat.variation > 0 ? 'success' : 'error'"
-          variant="subtle"
-          class="text-xs"
-        >
+        <UBadge :color="stat.variation > 0 ? 'success' : 'error'" variant="subtle" class="text-xs">
           {{ stat.variation > 0 ? '+' : '' }}{{ stat.variation }}%
         </UBadge>
       </div>

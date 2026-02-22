@@ -13,15 +13,17 @@ const toast = useToast()
 const route = useRoute()
 const { session, checkSession } = useAuth()
 
-// Verify session status on application load
-checkSession()
-
 const isAuthPage = computed(() => ['/login', '/register', '/verify'].includes(route.path))
+
+// Verify session status on application load only if NOT on an auth page
+if (!isAuthPage.value) {
+  checkSession()
+}
 
 const open = ref(false)
 
 const mapMenu = (items: any[]): NavigationMenuItem[] => {
-  return items.map(item => {
+  return items.map((item) => {
     // 1. Normalize path. Only treat 'root' as '/' and non-empty strings as paths.
     let path: string | undefined
     if (item.to === 'root') {
@@ -62,35 +64,45 @@ const dynamicLinks = computed(() => {
   return mapMenu(session.value?.menu || [])
 })
 
-const staticLinks = [[{
-  label: 'Feedback',
-  icon: 'i-lucide-message-circle',
-  to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
-  target: '_blank'
-}, {
-  label: 'Help & Support',
-  icon: 'i-lucide-info',
-  to: 'https://github.com/nuxt/ui',
-  target: '_blank'
-}]] satisfies NavigationMenuItem[][]
+const staticLinks = [
+  [
+    {
+      label: 'Feedback',
+      icon: 'i-lucide-message-circle',
+      to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
+      target: '_blank'
+    },
+    {
+      label: 'Help & Support',
+      icon: 'i-lucide-info',
+      to: 'https://github.com/nuxt/ui',
+      target: '_blank'
+    }
+  ]
+] satisfies NavigationMenuItem[][]
 
 const links = computed(() => [dynamicLinks.value, staticLinks[0]])
 
-const groups = computed(() => [{
-  id: 'links',
-  label: 'Go to',
-  items: links.value.flat()
-}, {
-  id: 'code',
-  label: 'Code',
-  items: [{
-    id: 'source',
-    label: 'View page source',
-    icon: 'simple-icons:github',
-    to: `https://github.com/nuxt-ui-templates/dashboard-vue/blob/main/src/pages${route.path === '/' ? '/index' : route.path}.vue`,
-    target: '_blank'
-  }]
-}])
+const groups = computed(() => [
+  {
+    id: 'links',
+    label: 'Go to',
+    items: links.value.flat()
+  },
+  {
+    id: 'code',
+    label: 'Code',
+    items: [
+      {
+        id: 'source',
+        label: 'View page source',
+        icon: 'simple-icons:github',
+        to: `https://github.com/nuxt-ui-templates/dashboard-vue/blob/main/src/pages${route.path === '/' ? '/index' : route.path}.vue`,
+        target: '_blank'
+      }
+    ]
+  }
+])
 
 const cookie = useStorage('cookie-consent', 'pending')
 if (cookie.value !== 'accepted') {
@@ -98,18 +110,21 @@ if (cookie.value !== 'accepted') {
     title: 'We use first-party cookies to enhance your experience on our website.',
     duration: 0,
     close: false,
-    actions: [{
-      label: 'Accept',
-      color: 'neutral',
-      variant: 'outline',
-      onClick: () => {
-        cookie.value = 'accepted'
+    actions: [
+      {
+        label: 'Accept',
+        color: 'neutral',
+        variant: 'outline',
+        onClick: () => {
+          cookie.value = 'accepted'
+        }
+      },
+      {
+        label: 'Opt out',
+        color: 'neutral',
+        variant: 'ghost'
       }
-    }, {
-      label: 'Opt out',
-      color: 'neutral',
-      variant: 'ghost'
-    }]
+    ]
   })
 }
 </script>
@@ -154,10 +169,6 @@ if (cookie.value !== 'accepted') {
               tooltip
               class="mt-auto"
             />
-          </template>
-
-          <template #footer="{ collapsed }">
-            <UserMenu :collapsed="collapsed" />
           </template>
         </UDashboardSidebar>
 

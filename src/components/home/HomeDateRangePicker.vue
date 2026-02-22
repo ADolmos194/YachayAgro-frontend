@@ -19,11 +19,7 @@ const ranges = [
 ]
 
 const toCalendarDate = (date: Date) => {
-  return new CalendarDate(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    date.getDate()
-  )
+  return new CalendarDate(date.getFullYear(), date.getMonth() + 1, date.getDate())
 }
 
 const calendarRange = computed({
@@ -31,7 +27,7 @@ const calendarRange = computed({
     start: selected.value.start ? toCalendarDate(selected.value.start) : undefined,
     end: selected.value.end ? toCalendarDate(selected.value.end) : undefined
   }),
-  set: (newValue: { start: CalendarDate | undefined, end: CalendarDate | undefined }) => {
+  set: (newValue: { start: CalendarDate | undefined; end: CalendarDate | undefined }) => {
     selected.value = {
       start: newValue.start ? newValue.start.toDate(getLocalTimeZone()) : new Date(),
       end: newValue.end ? newValue.end.toDate(getLocalTimeZone()) : new Date()
@@ -39,7 +35,7 @@ const calendarRange = computed({
   }
 })
 
-const isRangeSelected = (range: { days?: number, months?: number, years?: number }) => {
+const isRangeSelected = (range: { days?: number; months?: number; years?: number }) => {
   if (!selected.value.start || !selected.value.end) return false
 
   const currentDate = today(getLocalTimeZone())
@@ -59,7 +55,7 @@ const isRangeSelected = (range: { days?: number, months?: number, years?: number
   return selectedStart.compare(startDate) === 0 && selectedEnd.compare(currentDate) === 0
 }
 
-const selectRange = (range: { days?: number, months?: number, years?: number }) => {
+const selectRange = (range: { days?: number; months?: number; years?: number }) => {
   const endDate = today(getLocalTimeZone())
   let startDate = endDate.copy()
 
@@ -95,13 +91,14 @@ const selectRange = (range: { days?: number, months?: number, years?: number }) 
             {{ df.format(selected.start) }}
           </template>
         </template>
-        <template v-else>
-          Pick a date
-        </template>
+        <template v-else> Pick a date </template>
       </span>
 
       <template #trailing>
-        <UIcon name="i-lucide-chevron-down" class="shrink-0 text-dimmed size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+        <UIcon
+          name="i-lucide-chevron-down"
+          class="shrink-0 text-dimmed size-5 group-data-[state=open]:rotate-180 transition-transform duration-200"
+        />
       </template>
     </UButton>
 
@@ -121,12 +118,7 @@ const selectRange = (range: { days?: number, months?: number, years?: number }) 
           />
         </div>
 
-        <UCalendar
-          v-model="calendarRange"
-          class="p-2"
-          :number-of-months="2"
-          range
-        />
+        <UCalendar v-model="calendarRange" class="p-2" :number-of-months="2" range />
       </div>
     </template>
   </UPopover>

@@ -27,5 +27,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Security Audit
+        run: pnpm audit --audit-level moderate
+
       - name: CI Validation
         run: pnpm run ci:validate
