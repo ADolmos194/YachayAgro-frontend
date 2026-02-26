@@ -345,28 +345,9 @@ const hotSettingsDetails = ref({
   background: white !important;
 }
 
-.dark .htContextMenu {
-  border: 1px solid #3f3f46 !important; /* Zinc-700 */
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
-}
-
-.dark .htContextMenu table.htCore {
-  background: #18181b !important; /* Zinc-900 */
-  color: #e4e4e7 !important;
-}
-
 /* Ensure the hover highlight is visible */
 .htContextMenu table.htCore tr.htSelected {
   background-color: #f4f4f5 !important;
-}
-
-.dark .htContextMenu table.htCore tr.htSelected {
-  background-color: #27272a !important;
-}
-
-.dark .htContextMenu table.htCore td.htSeparator {
-  border-top: 1px solid #27272a !important;
-  background-color: #18181b !important;
 }
 
 /* Log Row Coloring - Targeting cells directly with higher specificity */
@@ -410,13 +391,6 @@ const hotSettingsDetails = ref({
   background-color: #f8fafc !important;
 }
 .dark .handsontable td.log-row-neutral {
-  background-color: #09090b !important; /* Zinc-950 base */
-}
-
-/* Fix for the white area at the bottom of the table when few rows exist */
-.dark .handsontable,
-.dark .wtHider,
-.dark .wtSpreader {
-  background-color: #09090b !important;
+  background-color: #000000 !important; /* Pure Black for neutral rows */
 }
 </style>

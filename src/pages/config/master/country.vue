@@ -1246,12 +1246,6 @@ onMounted(() => {
   justify-content: center !important;
 }
 
-.dark .handsontable thead th,
-.dark .handsontable tbody th {
-  background-color: #09090b !important; /* Zinc-950 */
-  color: #a1a1aa !important; /* Zinc-400 */
-  border-color: #27272a !important; /* Zinc-800 */
-}
 
 /* Make sorting indicators visible in dark mode */
 .dark .handsontable .sortAction {
@@ -1270,18 +1264,7 @@ onMounted(() => {
   border-right: none !important;
 }
 
-.dark .handsontable .rowHeader {
-  background-color: #09090b !important;
-  color: #71717a !important; /* Zinc-500 */
-  border-right: 1px solid #18181b !important; /* Subtle neutral separator */
-}
 
-/* DARK MODE CELL STYLING - Strictly Pure Black */
-.dark .handsontable td {
-  background-color: #000000 !important; /* Pure Black */
-  color: #e4e4e7 !important; /* Zinc-200 */
-  border-color: #18181b !important; /* Zinc-900 border */
-}
 
 /* HIGHLIGHT DIRTY ROWS (Amber) */
 .handsontable td.dirty-row {

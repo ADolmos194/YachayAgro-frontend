@@ -31,3 +31,63 @@ body {
   --color-green-800: oklch(32.298% 0.05338 161.83);
   --color-green-900: oklch(17.276% 0.02184 161.78);
 }
+
+/* --- Global Handsontable Dark Mode Overrides --- */
+
+.dark .handsontable {
+  --hot-border-color: #27272a;
+  /* Zinc-800 */
+  --hot-bg-color: #000000;
+  /* Pure Black area */
+  --hot-text-color: #e4e4e7;
+  /* Zinc-200 */
+}
+
+/* Main background for all table related internal containers */
+.dark .handsontable,
+.dark .wtHider,
+.dark .wtSpreader,
+.dark .htCore,
+.dark .handsontable td {
+  background-color: #000000 !important;
+  color: #e4e4e7 !important;
+}
+
+/* Headers and Row Indicators */
+.dark .handsontable thead th,
+.dark .handsontable tbody th,
+.dark .handsontable .rowHeader {
+  background-color: #09090b !important;
+  /* Zinc-950 */
+  color: #a1a1aa !important;
+  /* Zinc-400 */
+  border-color: #27272a !important;
+  /* Zinc-800 */
+}
+
+/* Selection Borders */
+.dark .handsontable .wtBorder {
+  background-color: #3b82f6 !important;
+}
+
+/* Context Menu Overrides for Dark Mode */
+.dark .htContextMenu {
+  border: 1px solid #3f3f46 !important;
+  /* Zinc-700 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .htContextMenu table.htCore {
+  background: #18181b !important;
+  /* Zinc-900 */
+  color: #e4e4e7 !important;
+}
+
+.dark .htContextMenu table.htCore tr.htSelected {
+  background-color: #27272a !important;
+}
+
+.dark .htContextMenu table.htCore td.htSeparator {
+  border-top: 1px solid #27272a !important;
+  background-color: #18181b !important;
+}
