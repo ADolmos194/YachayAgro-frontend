@@ -87,7 +87,15 @@ const groups = computed(() => [
   {
     id: 'links',
     label: 'Go to',
-    items: links.value.flat()
+    items: links.value.flat().map((link) => {
+      // CommandPaletteItem expects chip to be ChipProps | undefined,
+      // but NavigationMenuItem allows boolean | ChipProps | undefined.
+      const { chip, ...rest } = link as any
+      return {
+        ...rest,
+        chip: typeof chip === 'object' ? chip : undefined
+      }
+    })
   },
   {
     id: 'code',
