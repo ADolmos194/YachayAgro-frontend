@@ -72,7 +72,7 @@ const fetchLogs = async () => {
       credentials: 'include'
     })
     const result = await response.json()
-    if (response.ok && result.status === 'success') {
+    if (response.ok && result.status === 'success' && result.data && Array.isArray(result.data.results)) {
       logs.value = result.data.results.map((log: any) => {
         const evt = EVENT_NAMES[log.key_event] || { label: 'EVENTO', color: 'neutral' }
         return {
@@ -83,6 +83,18 @@ const fetchLogs = async () => {
         }
       })
       total.value = result.data.total
+    } else if (response.ok && result.status === 'success' && Array.isArray(result.data)) {
+      // Fallback for old/direct array format just in case
+      logs.value = result.data.map((log: any) => {
+        const evt = EVENT_NAMES[log.key_event] || { label: 'EVENTO', color: 'neutral' }
+        return {
+          ...log,
+          event_name: evt.label,
+          event_color: evt.color,
+          created_at_fmt: new Date(log.created_at).toLocaleString()
+        }
+      })
+      total.value = result.data.length
     }
   } catch (error) {
     console.error('Error fetching logs:', error)
