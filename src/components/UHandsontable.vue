@@ -62,7 +62,25 @@ defineExpose({
 
 .dark .handsontable {
   --hot-border-color: #27272a; /* Zinc-800 */
-  --hot-bg-color: transparent;
+  --hot-bg-color: #09090b; /* Zinc-950 */
   --hot-text-color: #d4d4d8; /* Zinc-300 */
+}
+/* Fix selection borders in dark mode */
+.dark .handsontable .wtBorder {
+  background-color: #3b82f6 !important; /* Primary blue for selection */
+}
+
+.dark .handsontable .wtBorder.current {
+  background-color: #3b82f6 !important;
+}
+
+.dark .handsontable .wtBorder.area {
+  background-color: #3b82f6 !important;
+}
+
+/* Fix for white line in column headers */
+.dark .handsontable th {
+  background-color: #18181b !important; /* Zinc-900 */
+  border-color: #27272a !important;
 }
 </style>

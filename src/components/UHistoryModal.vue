@@ -337,6 +337,22 @@ const hotSettingsDetails = ref({
 .htContextMenu {
   pointer-events: auto !important;
   z-index: 10000 !important;
+  border: 1px solid #d4d4d8 !important; /* Light mode default */
+}
+
+.htContextMenu table.htCore {
+  border: none !important;
+  background: white !important;
+}
+
+.dark .htContextMenu {
+  border: 1px solid #3f3f46 !important; /* Zinc-700 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .htContextMenu table.htCore {
+  background: #18181b !important; /* Zinc-900 */
+  color: #e4e4e7 !important;
 }
 
 /* Ensure the hover highlight is visible */
@@ -348,13 +364,18 @@ const hotSettingsDetails = ref({
   background-color: #27272a !important;
 }
 
+.dark .htContextMenu table.htCore td.htSeparator {
+  border-top: 1px solid #27272a !important;
+  background-color: #18181b !important;
+}
+
 /* Log Row Coloring - Targeting cells directly with higher specificity */
 .handsontable td.log-row-success {
   background-color: #f0fdf4 !important; /* Green-50 */
   color: #166534 !important; /* Green-800 */
 }
 .dark .handsontable td.log-row-success {
-  background-color: rgba(22, 101, 52, 0.2) !important;
+  background-color: rgba(34, 197, 94, 0.1) !important;
   color: #4ade80 !important;
 }
 
@@ -363,7 +384,7 @@ const hotSettingsDetails = ref({
   color: #075985 !important; /* Blue-800 */
 }
 .dark .handsontable td.log-row-info {
-  background-color: rgba(7, 89, 133, 0.2) !important;
+  background-color: rgba(56, 189, 248, 0.1) !important;
   color: #38bdf8 !important;
 }
 
@@ -372,7 +393,7 @@ const hotSettingsDetails = ref({
   color: #991b1b !important; /* Red-800 */
 }
 .dark .handsontable td.log-row-error {
-  background-color: rgba(153, 27, 27, 0.2) !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
   color: #f87171 !important;
 }
 
@@ -381,7 +402,7 @@ const hotSettingsDetails = ref({
   color: #92400e !important; /* Amber-800 */
 }
 .dark .handsontable td.log-row-warning {
-  background-color: rgba(146, 64, 14, 0.2) !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fbbf24 !important;
 }
 
@@ -389,6 +410,13 @@ const hotSettingsDetails = ref({
   background-color: #f8fafc !important;
 }
 .dark .handsontable td.log-row-neutral {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: #09090b !important; /* Zinc-950 base */
+}
+
+/* Fix for the white area at the bottom of the table when few rows exist */
+.dark .handsontable,
+.dark .wtHider,
+.dark .wtSpreader {
+  background-color: #09090b !important;
 }
 </style>
