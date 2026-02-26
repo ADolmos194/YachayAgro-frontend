@@ -385,6 +385,9 @@ const hotSettingsDetails = ref({
 .htContextMenu table.htCore tr.htSelected {
   background-color: #f4f4f5 !important;
 }
+.dark .htContextMenu table.htCore tr.htSelected {
+  background-color: #3f3f46 !important;
+}
 
 /* Log Row Coloring - Targeting cells directly with higher specificity */
 .handsontable td.log-row-success {
