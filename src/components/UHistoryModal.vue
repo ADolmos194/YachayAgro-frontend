@@ -429,4 +429,13 @@ const hotSettingsDetails = ref({
 .dark .handsontable td.log-row-neutral {
   background-color: #000000 !important; /* Pure Black for neutral rows */
 }
+
+/* Force pure black background for the entire Handsontable area in dark mode */
+.dark .handsontable,
+.dark .handsontable .htCore,
+.dark .handsontable th,
+.dark .handsontable td,
+.dark .handsontable .wtHolder {
+    background-color: #000000 !important;
+}
 </style>
