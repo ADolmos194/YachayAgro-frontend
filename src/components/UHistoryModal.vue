@@ -19,16 +19,16 @@ const logs = ref<any[]>([])
 const selectedLogDetails = ref<any[]>([])
 const isDetailModalOpen = ref(false)
 
-const EVENT_NAMES: Record<string, string> = {
-  'fd9c7022-581c-4f60-b22b-653138544474': 'CREACIÓN',
-  'a92b49fc-3690-4200-80b7-5a883279599e': 'ACTUALIZACIÓN',
-  'c57fd4e8-7108-4e96-9f5a-0ff5e5f69afb': 'INACTIVACIÓN',
-  'b443609e-a554-4e38-bc3e-0e1a82792f35': 'RESTAURACIÓN',
-  'fe29663e-12f2-40b9-90af-2c1f8ff8630a': 'ANULACIÓN',
-  '8faad2e0-7a71-4225-aa1b-23ba2d04062d': 'IMPORTACIÓN',
-  'a801a75d-d648-4006-ac4b-af5777f83691': 'ACTIVACIÓN MASIVA',
-  '4dfc1fff-1845-4a38-8c14-1233448f0aed': 'INACTIVACIÓN MASIVA',
-  'dc1e860e-b22f-4a62-9eac-20b0f00e3489': 'ANULACIÓN MASIVA'
+const EVENT_NAMES: Record<string, { label: string; color: string }> = {
+  'fd9c7022-581c-4f60-b22b-653138544474': { label: 'CREACIÓN', color: 'success' },
+  'a92b49fc-3690-4200-80b7-5a883279599e': { label: 'ACTUALIZACIÓN', color: 'warning' },
+  'c57fd4e8-7108-4e96-9f5a-0ff5e5f69afb': { label: 'INACTIVACIÓN', color: 'error' },
+  'b443609e-a554-4e38-bc3e-0e1a82792f35': { label: 'RESTAURACIÓN', color: 'success' },
+  'fe29663e-12f2-40b9-90af-2c1f8ff8630a': { label: 'ANULACIÓN', color: 'error' },
+  '8faad2e0-7a71-4225-aa1b-23ba2d04062d': { label: 'IMPORTACIÓN', color: 'info' },
+  'a801a75d-d648-4006-ac4b-af5777f83691': { label: 'ACTIVACIÓN MASIVA', color: 'success' },
+  '4dfc1fff-1845-4a38-8c14-1233448f0aed': { label: 'INACTIVACIÓN MASIVA', color: 'error' },
+  'dc1e860e-b22f-4a62-9eac-20b0f00e3489': { label: 'ANULACIÓN MASIVA', color: 'error' }
 }
 
 watch(
@@ -63,11 +63,15 @@ const fetchLogs = async () => {
     })
     const result = await response.json()
     if (response.ok && result.status === 'success') {
-      logs.value = result.data.map((log: any) => ({
-        ...log,
-        event_name: EVENT_NAMES[log.key_event] || 'EVENTO',
-        created_at_fmt: new Date(log.created_at).toLocaleString()
-      }))
+      logs.value = result.data.map((log: any) => {
+        const evt = EVENT_NAMES[log.key_event] || { label: 'EVENTO', color: 'neutral' }
+        return {
+          ...log,
+          event_name: evt.label,
+          event_color: evt.color,
+          created_at_fmt: new Date(log.created_at).toLocaleString()
+        }
+      })
     }
   } catch (error) {
     console.error('Error fetching logs:', error)
@@ -107,11 +111,22 @@ const hotSettingsLogs = ref({
   colHeaders: ['EVENTO', 'MÓDULO', 'TABLA', 'USUARIO', 'FECHA Y HORA'],
   columns: [
     { data: 'event_name', readOnly: true, width: 140 },
-    { data: 'name_module', readOnly: true, width: 200 },
+    { data: 'name_module', readOnly: true, width: 220 },
     { data: 'name_table', readOnly: true, width: 250 },
     { data: 'user_name', readOnly: true, width: 150 },
     { data: 'created_at_fmt', readOnly: true, width: 200 }
   ],
+  cells(row: number) {
+    const instance = (this as any).instance
+    if (!instance) return {}
+    const log = instance.getSourceDataAtRow(row)
+    if (log && log.event_color) {
+      return {
+        className: `log-row-${log.event_color} htMiddle`
+      }
+    }
+    return { className: 'htMiddle' }
+  },
   contextMenu: {
     items: {
       history_details: {
@@ -230,6 +245,43 @@ const hotSettingsDetails = ref({
             </div>
             <UHandsontable :settings="hotSettingsLogs" :data="logs" />
           </div>
+
+          <!-- Color Legends -->
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1">
+            <div class="flex items-center gap-1.5">
+              <div
+                class="w-2.5 h-2.5 rounded-full bg-success-500 shadow-sm shadow-success-500/20"
+              />
+              <span
+                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                >Creación / Restauración</span
+              >
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div
+                class="w-2.5 h-2.5 rounded-full bg-warning-500 shadow-sm shadow-warning-500/20"
+              />
+              <span
+                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                >Actualización</span
+              >
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-2.5 h-2.5 rounded-full bg-error-500 shadow-sm shadow-error-500/20" />
+              <span
+                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                >Inactivación / Anulación</span
+              >
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-2.5 h-2.5 rounded-full bg-info-500 shadow-sm shadow-info-500/20" />
+              <span
+                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                >Importación Masiva</span
+              >
+            </div>
+          </div>
+
           <p class="text-[10px] text-zinc-400 font-medium italic mt-1">
             * Click derecho sobre una fila para ver el detalle detallado de los cambios
           </p>
@@ -294,5 +346,49 @@ const hotSettingsDetails = ref({
 
 .dark .htContextMenu table.htCore tr.htSelected {
   background-color: #27272a !important;
+}
+
+/* Log Row Coloring - Targeting cells directly with higher specificity */
+.handsontable td.log-row-success {
+  background-color: #f0fdf4 !important; /* Green-50 */
+  color: #166534 !important; /* Green-800 */
+}
+.dark .handsontable td.log-row-success {
+  background-color: rgba(22, 101, 52, 0.2) !important;
+  color: #4ade80 !important;
+}
+
+.handsontable td.log-row-info {
+  background-color: #f0f9ff !important; /* Blue-50 */
+  color: #075985 !important; /* Blue-800 */
+}
+.dark .handsontable td.log-row-info {
+  background-color: rgba(7, 89, 133, 0.2) !important;
+  color: #38bdf8 !important;
+}
+
+.handsontable td.log-row-error {
+  background-color: #fef2f2 !important; /* Red-50 */
+  color: #991b1b !important; /* Red-800 */
+}
+.dark .handsontable td.log-row-error {
+  background-color: rgba(153, 27, 27, 0.2) !important;
+  color: #f87171 !important;
+}
+
+.handsontable td.log-row-warning {
+  background-color: #fffbeb !important; /* Amber-50 */
+  color: #92400e !important; /* Amber-800 */
+}
+.dark .handsontable td.log-row-warning {
+  background-color: rgba(146, 64, 14, 0.2) !important;
+  color: #fbbf24 !important;
+}
+
+.handsontable td.log-row-neutral {
+  background-color: #f8fafc !important;
+}
+.dark .handsontable td.log-row-neutral {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }
 </style>

@@ -1,11 +1,14 @@
-import { defineConfig } from 'vite'
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import ui from '@nuxt/ui/vite'
+import tailwindcss from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    tailwindcss(),
     ui({
       ui: {
         colors: {
@@ -15,5 +18,8 @@ export default defineConfig({
       }
     })
   ],
-  envPrefix: 'VUE_'
+  envPrefix: 'VUE_',
+  test: {
+    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', 'e2e']
+  }
 })

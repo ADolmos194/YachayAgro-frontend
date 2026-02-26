@@ -696,18 +696,25 @@ onMounted(() => {
       <UDashboardNavbar :ui="{ right: 'gap-3' }">
         <template #leading>
           <UDashboardSidebarCollapse />
-          <div class="flex items-center gap-2 ml-2">
+          <div class="flex items-center gap-1 sm:gap-2 ml-1 sm:ml-2 overflow-hidden">
             <span
-              class="text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider"
+              class="hidden lg:inline text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider whitespace-nowrap"
               >Configuración</span
             >
-            <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-zinc-300 dark:text-zinc-700" />
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="hidden lg:inline w-4 h-4 text-zinc-300 dark:text-zinc-700"
+            />
             <span
-              class="text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider"
+              class="hidden md:inline text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider whitespace-nowrap"
               >Maestra</span
             >
-            <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-zinc-300 dark:text-zinc-700" />
-            <span class="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight"
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="hidden md:inline w-4 h-4 text-zinc-300 dark:text-zinc-700"
+            />
+            <span
+              class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight truncate"
               >Departamento</span
             >
             <template v-if="parentCountryName">
@@ -715,7 +722,12 @@ onMounted(() => {
                 name="i-lucide-chevron-right"
                 class="w-4 h-4 text-zinc-300 dark:text-zinc-700"
               />
-              <UBadge color="primary" variant="subtle" size="xs" class="font-bold uppercase">
+              <UBadge
+                color="primary"
+                variant="subtle"
+                size="xs"
+                class="font-bold uppercase truncate max-w-[80px] sm:max-w-none"
+              >
                 {{ parentCountryName }}
               </UBadge>
             </template>
@@ -775,22 +787,26 @@ onMounted(() => {
 
         <!-- Unified Header (Title + Actions) -->
         <div
-          class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/50"
+          class="flex flex-col lg:flex-row lg:items-center justify-between p-4 lg:p-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/50 gap-4 transition-all duration-300"
         >
-          <div class="flex items-center gap-4">
+          <!-- Title Section -->
+          <div class="flex flex-col lg:flex-row lg:items-center gap-4 flex-1">
             <h2
-              class="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight leading-tight"
+              class="text-xl lg:text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight shrink-0"
             >
               Listado de departamentos
             </h2>
-            <div class="relative w-64">
+
+            <!-- Search Field (Full width on mobile, limited on desktop) -->
+            <div class="w-full lg:max-w-xs">
               <UInput
                 v-model="searchQuery"
                 icon="i-lucide-search"
-                placeholder="Buscar departamento..."
-                class="rounded-xl shadow-sm"
+                placeholder="Buscar departamentos..."
+                class="rounded-xl shadow-sm w-full"
                 variant="outline"
                 color="neutral"
+                size="md"
                 @update:model-value="page = 1"
               >
                 <template #trailing>
@@ -806,178 +822,186 @@ onMounted(() => {
                 </template>
               </UInput>
             </div>
+          </div>
 
+          <!-- Mobile Cluster: Filters + Actions (Horizontal on mobile) -->
+          <div class="flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
             <!-- Status Filter Tabs -->
-            <div class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
+            <div
+              class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 w-fit shadow-sm border border-zinc-200/50 dark:border-zinc-700/50 shrink-0"
+            >
               <UButton
                 v-for="f in [
-                  { key: 'todos', label: 'TODOS', color: 'neutral' as const },
-                  { key: 'activo', label: 'ACTIVOS', color: 'success' as const },
-                  { key: 'inactivo', label: 'INACTIVOS', color: 'warning' as const }
+                  { key: 'todos', t: 'T', full: 'TODOS', color: 'neutral' as const },
+                  { key: 'activo', t: 'A', full: 'ACTIVOS', color: 'success' as const },
+                  { key: 'inactivo', t: 'I', full: 'INACTIVOS', color: 'warning' as const }
                 ]"
                 :key="f.key"
-                :label="f.label"
                 :color="statusFilter === f.key ? f.color : 'neutral'"
                 :variant="statusFilter === f.key ? 'solid' : 'ghost'"
                 size="xs"
-                class="font-bold rounded-lg tracking-tight transition-all"
+                class="font-extrabold rounded-lg tracking-tighter transition-all px-2.5 sm:px-4"
                 @click="setStatusFilter(f.key as any)"
-              />
+              >
+                <span class="sm:hidden">{{ f.t }}</span>
+                <span class="hidden sm:inline text-[10px]">{{ f.full }}</span>
+              </UButton>
             </div>
 
-            <!-- Change Indicators -->
-            <div v-if="dirtyCount > 0" class="flex gap-2 items-center">
-              <UBadge
-                v-if="newCount > 0"
-                color="success"
-                variant="subtle"
-                size="md"
-                class="font-black px-3 py-1 text-sm rounded-full shadow-sm"
-              >
-                +{{ newCount }} Nuevos
-              </UBadge>
-              <UBadge
-                v-if="editedCount > 0"
-                color="warning"
-                variant="subtle"
-                size="md"
-                class="font-black px-3 py-1 text-sm rounded-full shadow-sm"
-              >
-                {{ editedCount }} Editados
-              </UBadge>
-              <UBadge
-                v-if="inactivateCount > 0"
-                color="error"
-                variant="subtle"
-                size="md"
-                class="font-black px-3 py-1 text-sm rounded-full shadow-sm"
-              >
-                {{ inactivateCount }} Inactivados
-              </UBadge>
-              <UBadge
-                v-if="restoreCount > 0"
-                color="info"
-                variant="subtle"
-                size="md"
-                class="font-black px-3 py-1 text-sm rounded-full shadow-sm"
-              >
-                {{ restoreCount }} Restaurados
-              </UBadge>
-              <UBadge
-                v-if="annulCount > 0"
-                color="error"
-                variant="subtle"
-                size="md"
-                class="font-black px-3 py-1 text-sm rounded-full shadow-sm"
-              >
-                {{ annulCount }} Anulados
-              </UBadge>
-            </div>
-          </div>
-
-          <div class="flex gap-4 items-center">
-            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.EXPORT)" text="Exportar a Excel">
-              <UButton
-                icon="i-lucide-file-down"
-                color="info"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                :loading="excelLoading"
-                @click="onExport"
-              />
-            </UTooltip>
-            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.IMPORT)" text="Importar desde Excel">
-              <UButton
-                icon="i-lucide-file-up"
-                color="secondary"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                :loading="excelLoading"
-                @click="triggerImport"
-              />
-            </UTooltip>
-            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.TEMPLATE)" text="Descargar plantilla">
-              <UButton
-                icon="i-lucide-file-spreadsheet"
-                color="neutral"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                :loading="excelLoading"
-                @click="onDownloadTemplate"
-              />
-            </UTooltip>
-            <UTooltip text="Limpiar filtros">
-              <UButton
-                icon="i-lucide-filter-x"
-                color="neutral"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                @click="clearFilters"
-              />
-            </UTooltip>
-            <UTooltip text="Refrescar datos">
-              <UButton
-                icon="i-lucide-refresh-cw"
-                color="warning"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                :loading="loading"
-                @click="fetchDepartments"
-              />
-            </UTooltip>
-
-            <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.CREATE)" text="Agregar fila">
-              <UButton
-                icon="i-lucide-list-plus"
-                color="success"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                @click="addNewRow"
-              />
-            </UTooltip>
-
-            <UTooltip
-              v-if="can(DEPARTMENT_PERMISSIONS.CREATE) || can(DEPARTMENT_PERMISSIONS.UPDATE)"
-              text="Guardar cambios"
-            >
-              <UChip
-                :text="dirtyCount.toString()"
-                :show="dirtyCount > 0"
-                color="error"
-                size="md"
-                :ui="{
-                  base: '!-top-1 !-right-1 min-w-[20px] h-[20px] flex items-center justify-center text-[11px] font-bold ring-2 ring-white dark:ring-zinc-900 shadow-sm'
-                }"
-              >
+            <!-- Action Buttons Wrap -->
+            <div class="flex flex-wrap gap-2 items-center justify-end">
+              <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.EXPORT)" text="Exportar">
                 <UButton
-                  icon="i-lucide-save"
+                  icon="i-lucide-file-down"
                   color="info"
                   variant="solid"
-                  size="xl"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  :loading="excelLoading"
+                  @click="onExport"
+                />
+              </UTooltip>
+              <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.IMPORT)" text="Importar">
+                <UButton
+                  icon="i-lucide-file-up"
+                  color="secondary"
+                  variant="solid"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  :loading="excelLoading"
+                  @click="triggerImport"
+                />
+              </UTooltip>
+              <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.TEMPLATE)" text="Plantilla">
+                <UButton
+                  icon="i-lucide-file-spreadsheet"
+                  color="neutral"
+                  variant="solid"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  :loading="excelLoading"
+                  @click="onDownloadTemplate"
+                />
+              </UTooltip>
+              <UTooltip text="Limpiar">
+                <UButton
+                  icon="i-lucide-filter-x"
+                  color="neutral"
+                  variant="solid"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  @click="clearFilters"
+                />
+              </UTooltip>
+              <UTooltip text="Refrescar">
+                <UButton
+                  icon="i-lucide-refresh-cw"
+                  color="warning"
+                  variant="solid"
+                  size="md"
                   class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
                   :loading="loading"
-                  @click="saveChanges"
+                  @click="fetchDepartments"
                 />
-              </UChip>
-            </UTooltip>
-
-            <UTooltip text="Descartar cambios">
-              <UButton
-                icon="i-lucide-undo-2"
-                color="error"
-                variant="solid"
-                size="xl"
-                class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-                @click="confirmDiscard"
-              />
-            </UTooltip>
+              </UTooltip>
+              <UTooltip v-if="can(DEPARTMENT_PERMISSIONS.CREATE)" text="Agregar">
+                <UButton
+                  icon="i-lucide-list-plus"
+                  color="success"
+                  variant="solid"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  @click="addNewRow"
+                />
+              </UTooltip>
+              <UTooltip
+                v-if="can(DEPARTMENT_PERMISSIONS.CREATE) || can(DEPARTMENT_PERMISSIONS.UPDATE)"
+                text="Guardar"
+              >
+                <UChip
+                  :text="dirtyCount.toString()"
+                  :show="dirtyCount > 0"
+                  color="error"
+                  size="sm"
+                  :ui="{
+                    base: '!-top-1 !-right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold ring-2 ring-white dark:ring-zinc-900 shadow-sm'
+                  }"
+                >
+                  <UButton
+                    icon="i-lucide-save"
+                    color="info"
+                    variant="solid"
+                    size="md"
+                    class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                    :loading="loading"
+                    @click="saveChanges"
+                  />
+                </UChip>
+              </UTooltip>
+              <UTooltip text="Descartar">
+                <UButton
+                  icon="i-lucide-undo-2"
+                  color="error"
+                  variant="solid"
+                  size="md"
+                  class="rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                  @click="confirmDiscard"
+                />
+              </UTooltip>
+            </div>
           </div>
+        </div>
+
+        <!-- Change Indicators (Condensed below header on mobile) -->
+        <div
+          v-if="dirtyCount > 0"
+          class="flex flex-wrap gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 overflow-x-auto"
+        >
+          <UBadge
+            v-if="newCount > 0"
+            color="success"
+            variant="subtle"
+            size="xs"
+            class="font-black px-2 py-0.5 rounded-full"
+          >
+            +{{ newCount }} Nuevo
+          </UBadge>
+          <UBadge
+            v-if="editedCount > 0"
+            color="warning"
+            variant="subtle"
+            size="xs"
+            class="font-black px-2 py-0.5 rounded-full"
+          >
+            {{ editedCount }} Edit.
+          </UBadge>
+          <UBadge
+            v-if="inactivateCount > 0"
+            color="error"
+            variant="subtle"
+            size="xs"
+            class="font-black px-2 py-0.5 rounded-full"
+          >
+            {{ inactivateCount }} Inact.
+          </UBadge>
+          <UBadge
+            v-if="restoreCount > 0"
+            color="info"
+            variant="subtle"
+            size="xs"
+            class="font-black px-2 py-0.5 rounded-full"
+          >
+            {{ restoreCount }} Rest.
+          </UBadge>
+          <UBadge
+            v-if="annulCount > 0"
+            color="error"
+            variant="subtle"
+            size="xs"
+            class="font-black px-2 py-0.5 rounded-full"
+          >
+            {{ annulCount }} Anul.
+          </UBadge>
         </div>
 
         <div class="flex-1 overflow-hidden p-4 relative">
@@ -991,16 +1015,22 @@ onMounted(() => {
             v-if="!loading && departments.length === 0"
             class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm z-10"
           >
-            <div class="p-6 rounded-full bg-zinc-50 dark:bg-zinc-900 mb-4 shadow-inner">
+            <div
+              class="p-4 sm:p-6 rounded-full bg-zinc-50 dark:bg-zinc-900 mb-3 sm:mb-4 shadow-inner"
+            >
               <UIcon
                 name="i-lucide-database-zap"
-                class="w-16 h-16 text-zinc-300 dark:text-zinc-700"
+                class="w-10 h-10 sm:w-16 sm:h-16 text-zinc-300 dark:text-zinc-700"
               />
             </div>
-            <h3 class="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
+            <h3
+              class="text-base sm:text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight text-center"
+            >
               No hay datos a mostrar
             </h3>
-            <p class="text-zinc-500 dark:text-zinc-400 mt-2 font-medium tracking-tight">
+            <p
+              class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-2 font-medium tracking-tight text-center px-4"
+            >
               Agrega un nuevo registro o importa desde Excel para comenzar.
             </p>
             <UButton
@@ -1008,13 +1038,41 @@ onMounted(() => {
               icon="i-lucide-plus"
               color="success"
               variant="solid"
-              size="lg"
-              class="mt-6 font-black rounded-xl shadow-lg ring-4 ring-success-500/10 transition-all hover:scale-105"
+              size="md"
+              class="mt-4 sm:mt-6 font-black rounded-xl shadow-lg ring-4 ring-success-500/10 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
               @click="addNewRow"
             />
           </div>
         </div>
 
+        <!-- Color Legend Bar -->
+        <div
+          class="flex items-center justify-center gap-6 px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50"
+        >
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-success-500 shadow-sm shadow-success-500/20" />
+            <span
+              class="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest"
+              >Nuevo Registro</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-warning-500 shadow-sm shadow-warning-500/20" />
+            <span
+              class="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest"
+              >Con Cambios</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-error-500 shadow-sm shadow-error-500/20" />
+            <span
+              class="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest"
+              >Pendiente Inactivar</span
+            >
+          </div>
+        </div>
+
+        <!-- Pagination Footer -->
         <div
           class="flex items-center justify-between p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900"
         >
@@ -1024,12 +1082,13 @@ onMounted(() => {
             <span class="font-bold text-zinc-900 dark:text-white">{{ departments.length }}</span>
             registros
           </div>
+
           <div class="flex items-center gap-6">
             <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-400 uppercase font-bold tracking-wider">Filas:</span>
               <USelectMenu
                 v-model="pageSize"
-                :items="[10, 15, 20, 50]"
+                :items="[10, 20, 50]"
                 :searchable="false"
                 size="sm"
                 class="w-16"
@@ -1050,7 +1109,7 @@ onMounted(() => {
         <UModal
           v-model:open="isDiscardModalOpen"
           title="Confirmar descarte"
-          description="¿Estás seguro de que deseas descartar todos los cambios no guardados en la tabla?"
+          description="Confirmación para eliminar todos los cambios pendientes en la tabla actual."
           :ui="{ footer: 'justify-end' }"
         >
           <template #body>
@@ -1084,7 +1143,7 @@ onMounted(() => {
         <UModal
           v-model:open="isAnnulModalOpen"
           title="Confirmar anulación"
-          description="¿Estás seguro de que deseas ANULAR este registro?"
+          description="Confirmación para anular el registro seleccionado de forma permanente."
           :ui="{ footer: 'justify-end' }"
         >
           <template #body>
@@ -1119,7 +1178,7 @@ onMounted(() => {
         <UImportModal
           v-model:open="isImportModalOpen"
           title="Importación de Departamentos"
-          description="Selecciona y valida tu archivo Excel antes de procesar."
+          description="Herramienta para la carga masiva de departamentos desde archivos Excel con validación previa."
           :data="previewData"
           :headers="['CÓDIGO', 'NOMBRE', 'ABREVIACIÓN', 'PAÍS', 'ESTADO']"
           :validating="isValidating"

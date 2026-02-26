@@ -2,11 +2,13 @@ import './assets/css/main.css'
 
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import { createHead } from '@unhead/vue/client'
 import ui from '@nuxt/ui/vue-plugin'
 
 import App from './App.vue'
 
 const app = createApp(App)
+const head = createHead()
 
 const router = createRouter({
   routes: [
@@ -39,23 +41,21 @@ const router = createRouter({
 import { useAuth } from './composables/useAuth'
 const { isLoggedIn } = useAuth()
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
   const publicPages = ['/login', '/register', '/verify']
   const authRequired = !publicPages.includes(to.path)
 
   if (authRequired && !isLoggedIn.value) {
-    return next('/login')
+    return '/login'
   }
 
   if (isLoggedIn.value && publicPages.includes(to.path)) {
-    return next('/')
+    return '/'
   }
-
-  next()
 })
 
 app.use(router)
-
+app.use(head)
 app.use(ui)
 
 app.mount('#app')
