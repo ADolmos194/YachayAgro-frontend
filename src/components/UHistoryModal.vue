@@ -382,11 +382,12 @@ const hotSettingsDetails = ref({
 }
 
 /* Ensure the hover highlight is visible */
-.htContextMenu table.htCore tr.htSelected {
+.htContextMenu table.htCore tr.htSelected td {
   background-color: #f4f4f5 !important;
 }
-.dark .htContextMenu table.htCore tr.htSelected {
+.dark .htContextMenu table.htCore tr.htSelected td {
   background-color: #3f3f46 !important;
+  color: #ffffff !important;
 }
 
 /* Log Row Coloring - Targeting cells directly with higher specificity */

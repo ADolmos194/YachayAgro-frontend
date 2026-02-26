@@ -83,7 +83,7 @@ body {
   color: #e4e4e7 !important;
 }
 
-.dark .htContextMenu table.htCore tr.htSelected {
+.dark .htContextMenu table.htCore tr.htSelected td {
   background-color: #3f3f46 !important;
   color: #ffffff !important;
 }
