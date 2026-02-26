@@ -19,6 +19,11 @@ const logs = ref<any[]>([])
 const selectedLogDetails = ref<any[]>([])
 const isDetailModalOpen = ref(false)
 
+// Pagination state
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
 const EVENT_NAMES: Record<string, { label: string; color: string }> = {
   'fd9c7022-581c-4f60-b22b-653138544474': { label: 'CREACIÓN', color: 'success' },
   'a92b49fc-3690-4200-80b7-5a883279599e': { label: 'ACTUALIZACIÓN', color: 'warning' },
@@ -36,6 +41,7 @@ watch(
   (val) => {
     isOpen.value = val
     if (val && props.recordId) {
+      page.value = 1
       fetchLogs()
     } else if (!val) {
       isDetailModalOpen.value = false
@@ -58,12 +64,16 @@ const fetchLogs = async () => {
         'Content-Type': 'application/json',
         'X-CSRFToken': getCookie('csrftoken') || ''
       },
-      body: JSON.stringify({ id: props.recordId }),
+      body: JSON.stringify({
+        id: props.recordId,
+        page: page.value,
+        page_size: pageSize.value
+      }),
       credentials: 'include'
     })
     const result = await response.json()
     if (response.ok && result.status === 'success') {
-      logs.value = result.data.map((log: any) => {
+      logs.value = result.data.results.map((log: any) => {
         const evt = EVENT_NAMES[log.key_event] || { label: 'EVENTO', color: 'neutral' }
         return {
           ...log,
@@ -72,6 +82,7 @@ const fetchLogs = async () => {
           created_at_fmt: new Date(log.created_at).toLocaleString()
         }
       })
+      total.value = result.data.total
     }
   } catch (error) {
     console.error('Error fetching logs:', error)
@@ -79,6 +90,8 @@ const fetchLogs = async () => {
     loading.value = false
   }
 }
+
+watch(page, fetchLogs)
 
 const fetchLogDetails = async (logId: string) => {
   detailsLoading.value = true
@@ -151,7 +164,7 @@ const hotSettingsLogs = ref({
       }
     }
   },
-  height: 600,
+  height: 450, // Reduced height for approx 10 rows
   stretchH: 'all',
   selectionMode: 'row',
   currentRowClassName: 'currentRow',
@@ -194,7 +207,7 @@ const hotSettingsDetails = ref({
             </h3>
           </div>
           <div
-            class="border rounded-lg overflow-hidden border-zinc-200 dark:border-zinc-800 h-[600px] relative"
+            class="border rounded-lg overflow-hidden border-zinc-200 dark:border-zinc-800 h-[450px] relative bg-white dark:bg-black"
           >
             <!-- Loader for Initial Logs -->
             <div
@@ -246,40 +259,51 @@ const hotSettingsDetails = ref({
             <UHandsontable :settings="hotSettingsLogs" :data="logs" />
           </div>
 
-          <!-- Color Legends -->
-          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1">
-            <div class="flex items-center gap-1.5">
-              <div
-                class="w-2.5 h-2.5 rounded-full bg-success-500 shadow-sm shadow-success-500/20"
-              />
-              <span
-                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
-                >Creación / Restauración</span
-              >
+          <div class="flex items-center justify-between mt-2">
+            <!-- Color Legends -->
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1">
+              <div class="flex items-center gap-1.5">
+                <div
+                  class="w-2.5 h-2.5 rounded-full bg-success-500 shadow-sm shadow-success-500/20"
+                />
+                <span
+                  class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                  >Creación / Restauración</span
+                >
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div
+                  class="w-2.5 h-2.5 rounded-full bg-warning-500 shadow-sm shadow-warning-500/20"
+                />
+                <span
+                  class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                  >Actualización</span
+                >
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-error-500 shadow-sm shadow-error-500/20" />
+                <span
+                  class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                  >Inactivación / Anulación</span
+                >
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-info-500 shadow-sm shadow-info-500/20" />
+                <span
+                  class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
+                  >Importación Masiva</span
+                >
+              </div>
             </div>
-            <div class="flex items-center gap-1.5">
-              <div
-                class="w-2.5 h-2.5 rounded-full bg-warning-500 shadow-sm shadow-warning-500/20"
-              />
-              <span
-                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
-                >Actualización</span
-              >
-            </div>
-            <div class="flex items-center gap-1.5">
-              <div class="w-2.5 h-2.5 rounded-full bg-error-500 shadow-sm shadow-error-500/20" />
-              <span
-                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
-                >Inactivación / Anulación</span
-              >
-            </div>
-            <div class="flex items-center gap-1.5">
-              <div class="w-2.5 h-2.5 rounded-full bg-info-500 shadow-sm shadow-info-500/20" />
-              <span
-                class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight"
-                >Importación Masiva</span
-              >
-            </div>
+
+            <!-- Pagination -->
+            <UPagination
+              v-if="total > pageSize"
+              v-model:page="page"
+              :total="total"
+              :items-per-page="pageSize"
+              class="border-zinc-200 dark:border-zinc-800"
+            />
           </div>
 
           <p class="text-[10px] text-zinc-400 font-medium italic mt-1">
