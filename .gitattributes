@@ -1,0 +1,16 @@
+# Handle line endings automatically for files detected as text
+# and perform LF normalization.
+* text=auto eol=lf
+
+# Explicitly declare text files you want to always be LF or CRLF
+*.vue text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+
+# Standardize lockfiles
+pnpm-lock.yaml text eol=lf
